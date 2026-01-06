@@ -14,9 +14,9 @@ from google_sheet import (
     connect_sheet,
     get_or_create_worksheet,
     upsert_financial_data,
-    append_kpi_rows,
-    upsert_metadata
+    append_kpi_rows
 )
+
 
 # =========================
 # CONFIG
@@ -24,16 +24,17 @@ from google_sheet import (
 PDF_PATH = "report.pdf"
 SPREADSHEET_NAME = "FINANCIAL_REPORT"
 
-# =========================
-# CORE PROCESS (DIPANGGIL STREAMLIT)
-# =========================
-def process_pdf(pdf_path=PDF_PATH):
 
+# =========================
+# MAIN FUNCTION
+# =========================
+def main():
     print("📄 Reading PDF...")
-    text = extract_text(pdf_path)
+    text = extract_text(PDF_PATH)
 
     print("🗓️ Detecting period...")
     period = detect_period(text)
+    print("Period:", period)
 
     # =====================
     # PARSING
@@ -51,10 +52,11 @@ def process_pdf(pdf_path=PDF_PATH):
     kpi_rows = parse_kpi_result(text, period)
 
     # =====================
-    # UPLOAD PDF TO DRIVE
+    # UPLOAD PDF → DRIVE
     # =====================
     print("☁️ Uploading PDF to Google Drive...")
-    drive_info = upload_pdf_to_drive(pdf_path, period)
+    drive_link = upload_pdf_to_drive(PDF_PATH, period)
+    print("📎 Drive Link:", drive_link)
 
     # =====================
     # GOOGLE SHEET
@@ -62,44 +64,46 @@ def process_pdf(pdf_path=PDF_PATH):
     print("🔗 Connecting to Google Sheet...")
     sheet = connect_sheet(SPREADSHEET_NAME)
 
+    # ===== WORKSHEETS =====
     pl_ws = get_or_create_worksheet(sheet, "P&L")
     bs_ws = get_or_create_worksheet(sheet, "Balance Sheet")
     cf_ws = get_or_create_worksheet(sheet, "Cash Flow")
     kpi_ws = get_or_create_worksheet(sheet, "KPI Result")
-    meta_ws = get_or_create_worksheet(sheet, "FILES")
 
     # =====================
-    # WRITE DATA
+    # WRITE FINANCIAL DATA
     # =====================
+    print("⬆️ Updating P&L...")
     upsert_financial_data(pl_ws, period, pl_data)
+
+    print("⬆️ Updating Balance Sheet...")
     upsert_financial_data(bs_ws, period, bs_data)
+
+    print("⬆️ Updating Cash Flow...")
     upsert_financial_data(cf_ws, period, cf_data)
 
+    # =====================
+    # KPI RESULT
+    # =====================
+    print("➕ Appending KPI Result...")
     append_kpi_rows(kpi_ws, kpi_rows)
 
     # =====================
-    # SAVE PDF LINK
+    # SAVE DRIVE LINK
     # =====================
-    upsert_metadata(
-        meta_ws,
-        period,
-        drive_info["file_name"],
-        drive_info["link"]
-    )
+    print("🔗 Saving Drive link to Google Sheet...")
+    meta_ws = get_or_create_worksheet(sheet, "META")
 
-    return {
-        "period": period,
-        "pl_rows": len(pl_data),
-        "bs_rows": len(bs_data),
-        "cf_rows": len(cf_data),
-        "kpi_rows": len(kpi_rows),
-        "pdf_link": drive_info["link"]
-    }
+    if not meta_ws.row_values(1):
+        meta_ws.append_row(["Period", "PDF Drive Link"])
+
+    meta_ws.append_row([period, drive_link])
+
+    print("✅ ALL FINANCIAL DATA SUCCESSFULLY UPDATED")
 
 
 # =========================
-# CLI ENTRY (OPTIONAL)
+# ENTRY POINT
 # =========================
 if __name__ == "__main__":
-    result = process_pdf()
-    print("DONE:", result)
+    main()
