@@ -109,7 +109,7 @@ def upsert_financial_data(ws, period: str, data: dict):
 # =========================
 def append_kpi_rows(ws, rows: list):
     """
-    rows format:
+    rows format (WAJIB):
     [
         Period,
         Category,
@@ -143,8 +143,37 @@ def append_kpi_rows(ws, rows: list):
             "Importance"
         ])
 
-    # ===== BATCH APPEND =====
     ws.append_rows(
         rows,
         value_input_option="USER_ENTERED"
     )
+
+
+# =========================
+# SAVE PDF METADATA (DRIVE)
+# =========================
+def upsert_metadata(ws, period: str, filename: str, link: str):
+    """
+    Save uploaded PDF info to Google Sheet
+    """
+
+    # ===== ENSURE HEADER =====
+    if not ws.row_values(1):
+        ws.append_row([
+            "Period",
+            "Filename",
+            "Google Drive Link"
+        ])
+
+    rows = ws.get_all_values()
+
+    for i, row in enumerate(rows[1:], start=2):
+        if row and row[0] == period:
+            ws.update(f"B{i}:C{i}", [[filename, link]])
+            return
+
+    ws.append_row([
+        period,
+        filename,
+        link
+    ])
