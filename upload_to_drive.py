@@ -1,10 +1,8 @@
-# =========================
-# UPLOAD PDF TO GOOGLE DRIVE
-# =========================
+import os
 from google.oauth2.service_account import Credentials
 from googleapiclient.discovery import build
 from googleapiclient.http import MediaFileUpload
-from datetime import datetime
+
 
 # =========================
 # CONFIG
@@ -15,13 +13,14 @@ SCOPES = [
     "https://www.googleapis.com/auth/drive"
 ]
 
+# ROOT FOLDER (punya kamu)
 ROOT_FOLDER_ID = "12934i5FjV9OA96tU3OXBhmyHpGflXjXF"
 
 
 # =========================
-# AUTH
+# INTERNAL: CONNECT DRIVE
 # =========================
-def get_drive_service():
+def connect_drive():
     creds = Credentials.from_service_account_file(
         CREDENTIALS_FILE,
         scopes=SCOPES
@@ -30,25 +29,24 @@ def get_drive_service():
 
 
 # =========================
-# FIND OR CREATE FOLDER
+# INTERNAL: GET OR CREATE FOLDER
 # =========================
 def get_or_create_folder(service, name, parent_id):
     query = (
         f"name='{name}' and "
+        f"'{parent_id}' in parents and "
         f"mimeType='application/vnd.google-apps.folder' and "
-        f"'{parent_id}' in parents and trashed=false"
+        f"trashed=false"
     )
 
-    result = service.files().list(
+    results = service.files().list(
         q=query,
-        spaces="drive",
         fields="files(id, name)"
     ).execute()
 
-    files = result.get("files", [])
-
-    if files:
-        return files[0]["id"]
+    folders = results.get("files", [])
+    if folders:
+        return folders[0]["id"]
 
     folder_metadata = {
         "name": name,
@@ -65,37 +63,54 @@ def get_or_create_folder(service, name, parent_id):
 
 
 # =========================
-# UPLOAD PDF
+# PUBLIC: UPLOAD PDF
 # =========================
-def upload_pdf_to_drive(pdf_path, period):
+def upload_pdf_to_drive(local_pdf_path: str, period: str):
     """
-    pdf_path : local pdf path
-    period   : "Nov 2025"
+    local_pdf_path : path ke file PDF (misal: report.pdf)
+    period         : "Nov 2025"
+
+    RETURN:
+    - Google Drive file link
     """
 
-    service = get_drive_service()
+    if not os.path.exists(local_pdf_path):
+        raise FileNotFoundError(f"PDF not found: {local_pdf_path}")
 
-    # ===== PERIOD =====
-    month, year = period.split()
-    month_num = datetime.strptime(month, "%b").month
-    month_folder_name = f"{month_num:02d}_{month}"
+    service = connect_drive()
+
+    # ===== PARSE PERIOD =====
+    try:
+        month, year = period.split()
+    except ValueError:
+        raise ValueError("Period format harus: 'Nov 2025'")
 
     # ===== FOLDER STRUCTURE =====
-    year_folder_id = get_or_create_folder(service, year, ROOT_FOLDER_ID)
-    month_folder_id = get_or_create_folder(service, month_folder_name, year_folder_id)
+    year_folder_id = get_or_create_folder(
+        service,
+        year,
+        ROOT_FOLDER_ID
+    )
+
+    month_folder_id = get_or_create_folder(
+        service,
+        month,
+        year_folder_id
+    )
 
     # ===== FILE NAME =====
-    file_name = f"PL_{month}_{year}.pdf"
-
-    file_metadata = {
-        "name": file_name,
-        "parents": [month_folder_id]
-    }
+    filename = f"PL_{month}_{year}.pdf"
 
     media = MediaFileUpload(
-        pdf_path,
-        mimetype="application/pdf"
+        local_pdf_path,
+        mimetype="application/pdf",
+        resumable=True
     )
+
+    file_metadata = {
+        "name": filename,
+        "parents": [month_folder_id]
+    }
 
     uploaded = service.files().create(
         body=file_metadata,
@@ -103,8 +118,4 @@ def upload_pdf_to_drive(pdf_path, period):
         fields="id, webViewLink"
     ).execute()
 
-    return {
-        "file_id": uploaded["id"],
-        "file_name": file_name,
-        "link": uploaded["webViewLink"]
-    }
+    return uploaded["webViewLink"]
