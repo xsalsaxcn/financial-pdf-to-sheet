@@ -1,96 +1,81 @@
 # =========================
 # IMPORTS
 # =========================
-import streamlit as st
-import os
-from datetime import datetime
+from extract_pdf import extract_text
 
-from main import process_pdf   # ⬅️ WAJIB ADA (sudah kita siapkan di main.py)
+from parse_pl import detect_period, parse_profit_loss
+from parse_bs import parse_balance_sheet
+from parse_cashflow import parse_cashflow
+from parse_kpi import parse_kpi_result
+
+from google_sheet import (
+    connect_sheet,
+    get_or_create_worksheet,
+    upsert_financial_data,
+    append_kpi_rows
+)
 
 # =========================
 # CONFIG
 # =========================
-UPLOAD_DIR = "uploads"
-PDF_TARGET = "report.pdf"
-
-os.makedirs(UPLOAD_DIR, exist_ok=True)
-
-st.set_page_config(
-    page_title="Financial PDF → Google Sheet",
-    page_icon="📊",
-    layout="centered"
-)
+SPREADSHEET_NAME = "FINANCIAL_REPORT"
 
 # =========================
-# UI HEADER
+# CORE PROCESS FUNCTION
+# (DIPANGGIL OLEH STREAMLIT)
 # =========================
-st.title("📊 Financial Report Automation")
-st.caption("Upload PDF → Auto Parse → Auto Update Google Sheet")
+def process_pdf(pdf_path="report.pdf"):
+    print("📄 Reading PDF...")
+    text = extract_text(pdf_path)
 
-st.divider()
+    print("🗓️ Detecting period...")
+    period = detect_period(text)
 
-# =========================
-# FILE UPLOAD
-# =========================
-uploaded_file = st.file_uploader(
-    "📎 Upload Financial Report (PDF)",
-    type=["pdf"],
-    accept_multiple_files=False
-)
+    print("📊 Parsing P&L...")
+    pl_data = parse_profit_loss(text)
 
-if uploaded_file:
-    now = datetime.now()
-    display_name = uploaded_file.name
+    print("🏦 Parsing Balance Sheet...")
+    bs_data = parse_balance_sheet(text)
 
-    saved_path = os.path.join(UPLOAD_DIR, display_name)
+    print("💰 Parsing Cash Flow...")
+    cf_data = parse_cashflow(text)
 
-    with open(saved_path, "wb") as f:
-        f.write(uploaded_file.read())
+    print("📈 Parsing KPI Result...")
+    kpi_rows = parse_kpi_result(text, period)
 
-    st.success(f"✅ File uploaded: {display_name}")
-
-    st.info(
-        "📌 File akan diproses dan otomatis "
-        "dikirim ke Google Sheet **FINANCIAL_REPORT**"
-    )
-
-    st.divider()
+    print("🔗 Connecting to Google Sheet...")
+    sheet = connect_sheet(SPREADSHEET_NAME)
 
     # =========================
-    # PROCESS BUTTON
+    # WORKSHEETS
     # =========================
-    if st.button("🚀 Process & Update Google Sheet"):
-        with st.spinner("⏳ Processing PDF, please wait..."):
-            try:
-                # 🔁 Rename / replace ke nama yang dibaca engine
-                if os.path.exists(PDF_TARGET):
-                    os.remove(PDF_TARGET)
+    pl_ws = get_or_create_worksheet(sheet, "P&L")
+    bs_ws = get_or_create_worksheet(sheet, "Balance Sheet")
+    cf_ws = get_or_create_worksheet(sheet, "Cash Flow")
+    kpi_ws = get_or_create_worksheet(sheet, "KPI Result")
 
-                os.replace(saved_path, PDF_TARGET)
+    # =========================
+    # WRITE DATA
+    # =========================
+    upsert_financial_data(pl_ws, period, pl_data)
+    upsert_financial_data(bs_ws, period, bs_data)
+    upsert_financial_data(cf_ws, period, cf_data)
+    append_kpi_rows(kpi_ws, kpi_rows)
 
-                # ▶️ RUN CORE PROCESS
-                result = process_pdf(PDF_TARGET)
+    print("✅ FINANCIAL DATA UPDATED")
 
-                st.success("🎉 Processing completed successfully!")
+    return {
+        "period": period,
+        "pl_rows": len(pl_data),
+        "bs_rows": len(bs_data),
+        "cf_rows": len(cf_data),
+        "kpi_rows": len(kpi_rows),
+    }
 
-                # =========================
-                # RESULT SUMMARY
-                # =========================
-                st.subheader("📈 Processing Summary")
-                st.write(f"**Period:** {result['period']}")
-                st.write(f"• P&L rows: {result['pl_rows']}")
-                st.write(f"• Balance Sheet rows: {result['bs_rows']}")
-                st.write(f"• Cash Flow rows: {result['cf_rows']}")
-                st.write(f"• KPI rows appended: {result['kpi_rows']}")
 
-                st.success("✅ Data successfully updated in Google Sheet")
-
-            except Exception as e:
-                st.error("❌ Processing failed")
-                st.exception(e)
-
-else:
-    st.info("⬆️ Upload PDF untuk memulai proses")
-
-st.divider()
-st.caption("Powered by Python • pdfplumber • Streamlit • Google Sheets API")
+# =========================
+# CLI SUPPORT (OPTIONAL)
+# =========================
+if __name__ == "__main__":
+    result = process_pdf("report.pdf")
+    print(result)
