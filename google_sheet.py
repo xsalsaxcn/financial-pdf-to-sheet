@@ -1,4 +1,5 @@
 import gspread
+import streamlit as st
 from google.oauth2.service_account import Credentials
 from gspread.utils import rowcol_to_a1
 
@@ -6,8 +7,6 @@ from gspread.utils import rowcol_to_a1
 # =========================
 # CONFIG
 # =========================
-CREDENTIALS_FILE = "credentials.json"
-
 SCOPES = [
     "https://www.googleapis.com/auth/spreadsheets",
     "https://www.googleapis.com/auth/drive",
@@ -20,11 +19,14 @@ SCOPES = [
 def connect_sheet(spreadsheet_name: str):
     """
     Connect to Google Spreadsheet by NAME
+    (Streamlit Cloud compatible)
     """
-    creds = Credentials.from_service_account_file(
-        CREDENTIALS_FILE,
+
+    creds = Credentials.from_service_account_info(
+        st.secrets["gcp_service_account"],
         scopes=SCOPES
     )
+
     client = gspread.authorize(creds)
     return client.open(spreadsheet_name)
 
@@ -39,7 +41,6 @@ def get_or_create_worksheet(sheet, title: str, rows=1000, cols=30):
     try:
         return sheet.worksheet(title)
     except gspread.exceptions.WorksheetNotFound:
-        print(f"🆕 Creating worksheet: {title}")
         return sheet.add_worksheet(
             title=title,
             rows=rows,
@@ -77,7 +78,6 @@ def upsert_financial_data(ws, period: str, data: dict):
     batch_updates = []
 
     for account, value in data.items():
-        # ROW
         if account in account_column:
             row = account_column.index(account) + 1
         else:
@@ -89,14 +89,12 @@ def upsert_financial_data(ws, period: str, data: dict):
                 "values": [[account]]
             })
 
-        # VALUE
         cell = rowcol_to_a1(row, col)
         batch_updates.append({
             "range": cell,
             "values": [[value]]
         })
 
-    # ===== EXECUTE BATCH =====
     if batch_updates:
         ws.batch_update(
             batch_updates,
@@ -125,7 +123,6 @@ def append_kpi_rows(ws, rows: list):
     """
 
     if not rows:
-        print("⚠️ No KPI rows to append")
         return
 
     # ===== ENSURE HEADER =====
@@ -143,7 +140,6 @@ def append_kpi_rows(ws, rows: list):
             "Importance"
         ])
 
-    # ===== BATCH APPEND =====
     ws.append_rows(
         rows,
         value_input_option="USER_ENTERED"

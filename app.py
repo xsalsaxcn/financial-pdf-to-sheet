@@ -1,38 +1,81 @@
-import streamlit as st
-import os
-from datetime import datetime
-from main import process_pdf   # ← ini penting
+# =========================
+# IMPORTS
+# =========================
+from extract_pdf import extract_text
 
-UPLOAD_FOLDER = "uploads"
-os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+from parse_pl import detect_period, parse_profit_loss
+from parse_bs import parse_balance_sheet
+from parse_cashflow import parse_cashflow
+from parse_kpi import parse_kpi_result
 
-st.set_page_config(
-    page_title="Financial PDF Upload",
-    page_icon="📊",
-    layout="centered"
+from google_sheet import (
+    connect_sheet,
+    get_or_create_worksheet,
+    upsert_financial_data,
+    append_kpi_rows
 )
 
-st.title("📊 Financial Report Upload")
-st.caption("Upload PDF → Auto Parse → Google Sheet")
+# =========================
+# CONFIG
+# =========================
+SPREADSHEET_NAME = "FINANCIAL_REPORT"
 
-uploaded_file = st.file_uploader(
-    "Upload Financial Report (PDF)",
-    type=["pdf"]
-)
+# =========================
+# CORE PROCESS FUNCTION
+# (DIPANGGIL OLEH STREAMLIT)
+# =========================
+def process_pdf(pdf_path="report.pdf"):
+    print("📄 Reading PDF...")
+    text = extract_text(pdf_path)
 
-if uploaded_file:
-    filepath = os.path.join(UPLOAD_FOLDER, uploaded_file.name)
+    print("🗓️ Detecting period...")
+    period = detect_period(text)
 
-    with open(filepath, "wb") as f:
-        f.write(uploaded_file.read())
+    print("📊 Parsing P&L...")
+    pl_data = parse_profit_loss(text)
 
-    st.success(f"✅ File uploaded: {uploaded_file.name}")
+    print("🏦 Parsing Balance Sheet...")
+    bs_data = parse_balance_sheet(text)
 
-    if st.button("🚀 Process & Send to Google Sheet"):
-        with st.spinner("Processing PDF..."):
-            success, message = process_pdf(filepath)
+    print("💰 Parsing Cash Flow...")
+    cf_data = parse_cashflow(text)
 
-        if success:
-            st.success(message)
-        else:
-            st.error(message)
+    print("📈 Parsing KPI Result...")
+    kpi_rows = parse_kpi_result(text, period)
+
+    print("🔗 Connecting to Google Sheet...")
+    sheet = connect_sheet(SPREADSHEET_NAME)
+
+    # =========================
+    # WORKSHEETS
+    # =========================
+    pl_ws = get_or_create_worksheet(sheet, "P&L")
+    bs_ws = get_or_create_worksheet(sheet, "Balance Sheet")
+    cf_ws = get_or_create_worksheet(sheet, "Cash Flow")
+    kpi_ws = get_or_create_worksheet(sheet, "KPI Result")
+
+    # =========================
+    # WRITE DATA
+    # =========================
+    upsert_financial_data(pl_ws, period, pl_data)
+    upsert_financial_data(bs_ws, period, bs_data)
+    upsert_financial_data(cf_ws, period, cf_data)
+    append_kpi_rows(kpi_ws, kpi_rows)
+
+    print("✅ FINANCIAL DATA UPDATED")
+
+    return {
+        "period": period,
+        "pl_rows": len(pl_data),
+        "bs_rows": len(bs_data),
+        "cf_rows": len(cf_data),
+        "kpi_rows": len(kpi_rows),
+    }
+
+
+# =========================
+# CLI SUPPORT (OPTIONAL)
+# =========================
+if __name__ == "__main__":
+    result = process_pdf("report.pdf")
+    print(result)
