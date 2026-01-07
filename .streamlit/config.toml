@@ -1,0 +1,7 @@
+[theme]
+base="light"
+primaryColor="#2563EB"        # biru tombol / aksen
+backgroundColor="#F3F4F6"     # abu-abu muda, biar nggak putih polos
+secondaryBackgroundColor="#FFFFFF"
+textColor="#0F172A"           # biru tua / almost black
+font="sans serif"
