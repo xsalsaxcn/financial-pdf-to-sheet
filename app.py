@@ -35,25 +35,30 @@ def inject_css():
     st.markdown(
         """
         <style>
-        /* background halaman */
+        /* -------- PAGE BACKGROUND (GRADIENT) -------- */
         .stApp {
-            background: radial-gradient(circle at top, #111827 0, #020617 55%, #020617 100%);
+            background: linear-gradient(
+                180deg,
+                #020617 0%,
+                #0f172a 35%,
+                #e5f1ff 100%
+            );
         }
 
-        /* container utama */
+        /* -------- MAIN CONTAINER -------- */
         .block-container {
             max-width: 1100px;
             padding-top: 2.3rem;
             padding-bottom: 3rem;
         }
 
-        /* "kartu" besar (nav + body) */
         .shell {
             border-radius: 30px;
             overflow: hidden;
             box-shadow:
-                0 26px 70px rgba(15,23,42,0.85),
-                0 0 0 1px rgba(15,23,42,0.45);
+                0 26px 70px rgba(15,23,42,0.45),
+                0 0 0 1px rgba(15,23,42,0.40);
+            background: transparent;
         }
 
         .shell-nav {
@@ -73,12 +78,11 @@ def inject_css():
         }
 
         .shell-body {
-            /* biar nyatu sama background gelap, teks nanti kita buat terang */
-            background: transparent;
+            background: #f9fafb;
             padding: 2rem 2.4rem 2.1rem 2.4rem;
         }
 
-        /* hero kiri: teks */
+        /* -------- HERO LEFT -------- */
         .hero-badge {
             display: inline-flex;
             align-items: center;
@@ -86,7 +90,7 @@ def inject_css():
             font-size: 0.75rem;
             padding: 0.25rem 0.9rem;
             border-radius: 999px;
-            background: rgba(15,23,42,0.9);
+            background: #0f172a;
             border: 1px solid rgba(148,163,184,0.5);
             color: #e5e7eb;
             margin-bottom: 0.8rem;
@@ -100,25 +104,26 @@ def inject_css():
         .hero-title {
             font-size: 2.15rem;
             font-weight: 800;
-            color: #f9fafb;          /* PUTIH, jelas di background gelap */
+            color: #020617;
             margin-bottom: 0.4rem;
         }
         .hero-subtitle {
             font-size: 0.95rem;
-            color: #e5e7eb;          /* abu terang */
+            color: #4b5563;
             max-width: 430px;
             margin-bottom: 1.4rem;
         }
 
-        /* panel upload di kanan (sengaja terang) */
+        /* -------- UPLOAD PANEL (KANAN) -------- */
         .upload-panel {
             background: #eff6ff;
             border-radius: 22px;
             border: 2px dashed #60a5fa;
             padding: 1.0rem 1.1rem 1.2rem 1.1rem;
+            box-shadow: 0 12px 35px rgba(37,99,235,0.18);
         }
         .upload-panel * {
-            color: #1e293b !important;   /* teks di panel tetap gelap & jelas */
+            color: #1e293b !important;
         }
         .upload-title {
             font-weight: 600;
@@ -131,7 +136,18 @@ def inject_css():
             margin-bottom: 0.6rem;
         }
 
-        /* banner flow */
+        /* dropzone di dalam st.file_uploader */
+        .upload-panel [data-testid="stFileUploaderDropzone"] {
+            border: 2px dashed #60a5fa !important;
+            border-radius: 18px !important;
+            background: radial-gradient(circle at top, #ffffff 0%, #dbeafe 100%) !important;
+            padding: 0.6rem 0.9rem !important;
+        }
+        .upload-panel [data-testid="stFileUploaderDropzone"] div {
+            color: #1e293b !important;
+        }
+
+        /* -------- FLOW BANNER -------- */
         .flow-card {
             margin-top: 1.5rem;
             background: #020617;
@@ -147,15 +163,18 @@ def inject_css():
             margin-bottom: 0.4rem;
         }
 
-        /* tips */
+        /* -------- TIPS BOX (PUTIH) -------- */
         .tips-wrapper {
             margin-top: 1.7rem;
-            background: rgba(15,23,42,0.96);
-            color: #e5e7eb;
+            background: #ffffff;
+            color: #0f172a;
             border-radius: 20px;
             padding: 1rem 1.6rem 1.1rem 1.6rem;
-            box-shadow: 0 18px 45px rgba(15,23,42,0.9);
+            box-shadow: 0 18px 45px rgba(15,23,42,0.18);
             font-size: 0.9rem;
+        }
+        .tips-wrapper * {
+            color: #0f172a !important;
         }
         .tips-title {
             font-weight: 600;
@@ -169,12 +188,12 @@ def inject_css():
             margin-bottom: 0.15rem;
         }
 
-        /* footer */
+        /* -------- FOOTER -------- */
         .footer {
             margin-top: 1.6rem;
             text-align: center;
             font-size: 0.8rem;
-            color: #9ca3af;
+            color: #6b7280;
         }
 
         /* kecilkan jarak default antara markdown */
@@ -268,10 +287,10 @@ def process_pdf(pdf_path: str = "report.pdf") -> dict:
 def main():
     inject_css()
 
-    # ---------- SHELL (NAV + BODY DALAM 1 KARTU) ----------
+    # ---------- SHELL (NAV + BODY) ----------
     st.markdown('<div class="shell">', unsafe_allow_html=True)
 
-    # NAV BAR
+    # NAV
     st.markdown(
         """
         <div class="shell-nav">
@@ -282,12 +301,12 @@ def main():
         unsafe_allow_html=True,
     )
 
-    # BODY KARTU
+    # BODY
     st.markdown('<div class="shell-body">', unsafe_allow_html=True)
 
     col_left, col_center, col_right = st.columns([1.2, 1.0, 1.25])
 
-    # ----- LEFT: TITLE & DESKRIPSI -----
+    # ----- LEFT: TITLE -----
     with col_left:
         st.markdown(
             """
@@ -310,7 +329,7 @@ def main():
             unsafe_allow_html=True,
         )
 
-    # ----- CENTER: BEBEK -----
+    # ----- CENTER: DUCK -----
     with col_center:
         st.image("assets/duck.png", use_column_width=True)
 
