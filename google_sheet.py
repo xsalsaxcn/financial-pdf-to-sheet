@@ -18,10 +18,10 @@ SCOPES = [
 # =========================
 def connect_sheet(spreadsheet_name: str):
     """
-    Connect to Google Spreadsheet by NAME
-    (Streamlit Cloud compatible)
+    Connect ke Google Spreadsheet berdasarkan NAMA
+    (compatible untuk Streamlit Cloud).
 
-    Pastikan di secrets.toml / Secrets Streamlit kamu ada:
+    Pastikan di secrets.toml / Secrets Streamlit ada:
 
     [gcp_service_account]
     json = \"\"\"{ ...JSON service account dari Google... }\"\"\"
@@ -48,7 +48,7 @@ def connect_sheet(spreadsheet_name: str):
 # =========================
 def get_or_create_worksheet(sheet, title: str, rows: int = 1000, cols: int = 30):
     """
-    Get worksheet if exists, otherwise create it.
+    Ambil worksheet kalau ada, kalau belum ada → buat baru.
 
     sheet : object spreadsheet dari gspread
     title : nama worksheet (tab) yang dicari / dibuat
@@ -88,7 +88,7 @@ def upsert_financial_data(ws, period: str, data: dict):
 
     # ===== PERIOD COLUMN =====
     if period in headers:
-        col = headers.index(period) + 1  # index dimulai 0, kolom dimulai 1
+        col = headers.index(period) + 1  # index list dimulai 0, kolom dimulai 1
     else:
         col = len(headers) + 1
         ws.update_cell(1, col, period)
@@ -128,16 +128,16 @@ def upsert_financial_data(ws, period: str, data: dict):
 
 
 # =========================
-# APPEND KPI RESULT
+# APPEND / OVERWRITE KPI RESULT
 # =========================
 def append_kpi_rows(ws, rows: list):
     """
     ws   : worksheet object
     rows : list of rows, format:
         [
-            Period,
-            Category,
-            KPI Name,
+            Period,        # kolom A
+            Category,      # kolom B
+            KPI Name,      # kolom C
             Result,
             Result Unit,
             Target,
@@ -147,11 +147,20 @@ def append_kpi_rows(ws, rows: list):
             Importance
         ]
 
-    Fungsi ini hanya append (tambah baris di bawah).
+    Behaviour:
+    - Kalau BELUM ada data apa pun:
+        - bikin header di baris 1
+        - append rows biasa
+    - Kalau SUDAH ada dan period yang sama pernah masuk:
+        - semua baris dengan Period tsb dihapus dulu
+        - lalu rows baru di-append (overwrite per period)
     """
 
     if not rows:
         return
+
+    # Ambil period dari baris pertama (semua baris di batch ini period-nya sama)
+    period = rows[0][0]
 
     # ===== ENSURE HEADER =====
     if not ws.row_values(1):
@@ -170,4 +179,18 @@ def append_kpi_rows(ws, rows: list):
             ]
         )
 
+    # ===== HAPUS DATA LAMA UNTUK PERIOD YANG SAMA =====
+    # get_all_values() -> termasuk header; index 0 = row 1
+    all_values = ws.get_all_values()
+
+    rows_to_delete = []
+    for idx, row in enumerate(all_values[1:], start=2):  # mulai dari baris ke-2 (data)
+        if row and len(row) > 0 and row[0] == period:
+            rows_to_delete.append(idx)
+
+    # Hapus dari bawah supaya index tidak bergeser
+    for r in reversed(rows_to_delete):
+        ws.delete_rows(r)
+
+    # ===== TULIS KPI BARU =====
     ws.append_rows(rows, value_input_option="USER_ENTERED")
