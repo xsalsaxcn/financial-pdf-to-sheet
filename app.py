@@ -99,13 +99,13 @@ st.markdown(
         line-height: 1.5;
     }
 
-    /* UPLOAD CARD – dibesarkan */
+    /* UPLOAD CARD */
     .upload-card {
         background: linear-gradient(145deg,
                     rgba(15, 23, 42, 0.96),
                     rgba(15, 23, 42, 0.9));
         border-radius: 1.4rem;
-        padding: 1.4rem 1.6rem 1.5rem 1.6rem; /* LEBIH BESAR */
+        padding: 1.4rem 1.6rem 1.5rem 1.6rem;
         box-shadow:
             0 26px 70px rgba(0, 0, 0, 0.75),
             0 0 0 1px rgba(148, 163, 184, 0.35);
@@ -123,9 +123,9 @@ st.markdown(
         margin-bottom: 0.8rem;
     }
 
-    /* ==== FILE UPLOADER: DIGABUNG JADI SATU BLOK === */
+    /* ==== FILE UPLOADER – PATTERN & FONT ==== */
 
-    /* Hapus kotak kedua (blok putih) di luar */
+    /* Hapus wrapper putih default */
     div[data-testid="stFileUploader"] {
         background: transparent !important;
         border: none !important;
@@ -133,43 +133,53 @@ st.markdown(
         margin-top: 0.2rem;
     }
 
-    /* Blok utama klik/drag */
+    /* Dropzone utama (pattern + gradient) */
     div[data-testid="stFileUploader"] > div {
-        background: radial-gradient(circle at top left,
-                    rgba(37, 99, 235, 0.25),
-                    rgba(15, 23, 42, 0.98));
+        /* layer 1: dotted pattern */
+        background-image:
+            radial-gradient(circle at 1px 1px,
+                rgba(148, 163, 184, 0.22) 1px,
+                transparent 0),
+            linear-gradient(135deg,
+                #f9fbff,
+                #e4ecff);
+        background-size: 7px 7px, 100% 100%;
         border-radius: 1.1rem;
         border: 1px dashed rgba(148, 163, 184, 0.9);
-        padding: 0.9rem 1.1rem;
+        padding: 0.95rem 1.2rem;
         display: flex;
         align-items: center;
         justify-content: space-between;
         gap: 0.9rem;
-        box-shadow: 0 18px 45px rgba(15, 23, 42, 0.95);
+        box-shadow:
+            0 18px 45px rgba(15, 23, 42, 0.95),
+            0 0 0 1px rgba(255, 255, 255, 0.7);
     }
 
-    /* Hilangkan label default supaya lebih clean */
+    /* Hilangkan label bawaan */
     div[data-testid="stFileUploader"] label {
         display: none !important;
     }
 
-    /* Teks di sisi kiri (drag & drop, limit, dll) */
+    /* Teks di kiri (Drag & drop, limit) */
     div[data-testid="stFileUploader"] span {
-        color: #e5e7eb !important;
-        font-size: 0.87rem !important;
+        color: #0f172a !important;       /* navy gelap biar kebaca */
+        font-size: 0.9rem !important;
+        font-weight: 500 !important;
     }
 
-    /* Icon cloud – diperbesar */
+    /* Icon cloud – besar & biru */
     div[data-testid="stFileUploader"] svg {
         width: 42px;
         height: 42px;
-        stroke-width: 1.7;
+        stroke-width: 1.8;
+        stroke: #2563eb;
     }
 
-    /* Tombol Browse files – tetap kuning, menempel di blok */
+    /* Tombol Browse files */
     div[data-testid="stFileUploader"] button {
         border-radius: 999px;
-        padding: 0.35rem 1.4rem;
+        padding: 0.4rem 1.5rem;
         font-size: 0.9rem;
         font-weight: 600;
         background: linear-gradient(135deg, #facc15, #fb923c);
