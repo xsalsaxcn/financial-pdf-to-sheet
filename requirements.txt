@@ -4,3 +4,4 @@ gspread
 google-auth
 google-auth-oauthlib
 pandas
+google-api-python-client
