@@ -32,37 +32,66 @@ def process_pdf(pdf_path: str = "report.pdf"):
     """
     Baca PDF, parse semua section, update Google Sheet,
     dan upload PDF ke Google Drive.
+
+    Return dict ringkasan hasil.
     """
 
-    # --- Extract + detect period ---
+    # -------- EXTRACT & PARSE PDF --------
+    print("📄 Reading PDF...")
     text = extract_text(pdf_path)
+
+    print("🗓️ Detecting period...")
     period = detect_period(text)
 
-    # --- Parsing semua bagian laporan ---
+    print("📊 Parsing P&L...")
     pl_data = parse_profit_loss(text)
+
+    print("🏦 Parsing Balance Sheet...")
     bs_data = parse_balance_sheet(text)
+
+    print("💰 Parsing Cash Flow...")
     cf_data = parse_cashflow(text)
+
+    print("📈 Parsing KPI Result...")
     kpi_rows = parse_kpi_result(text, period)
 
-    # --- Google Sheet ---
+    # -------- UPLOAD PDF KE GOOGLE DRIVE --------
+    drive_link = None
+    try:
+        print("☁️ Uploading PDF to Google Drive...")
+        drive_meta = upload_pdf_to_drive(pdf_path, period)
+        # upload_pdf_to_drive diasumsikan return dict:
+        # { "file_id": ..., "file_name": ..., "link": ... }
+        drive_link = drive_meta.get("link")
+        print("📎 Drive link:", drive_link)
+    except Exception as e:
+        # Jangan matikan proses kalau upload gagal
+        print("⚠️ Gagal upload ke Google Drive:", e)
+
+    # -------- UPDATE GOOGLE SHEET --------
+    print("🔗 Connecting to Google Sheet...")
     sheet = connect_sheet(SPREADSHEET_NAME)
 
+    # Worksheets
     pl_ws = get_or_create_worksheet(sheet, "P&L")
     bs_ws = get_or_create_worksheet(sheet, "Balance Sheet")
     cf_ws = get_or_create_worksheet(sheet, "Cash Flow")
     kpi_ws = get_or_create_worksheet(sheet, "KPI Result")
 
-    # tulis / update data
+    print("⬆️ Updating P&L...")
     upsert_financial_data(pl_ws, period, pl_data)
+
+    print("⬆️ Updating Balance Sheet...")
     upsert_financial_data(bs_ws, period, bs_data)
+
+    print("⬆️ Updating Cash Flow...")
     upsert_financial_data(cf_ws, period, cf_data)
+
+    print("➕ Updating KPI Result (overwrite per period)...")
     append_kpi_rows(kpi_ws, kpi_rows)
 
-    # --- Upload PDF ke Google Drive (OAuth user) ---
-    drive_info = upload_pdf_to_drive(pdf_path, period)
-    drive_link = drive_info.get("link") if isinstance(drive_info, dict) else None
+    print("✅ FINANCIAL DATA UPDATED")
 
-    # Ringkasan untuk ditampilkan di UI
     return {
         "period": period,
         "pl_rows": len(pl_data),
@@ -83,89 +112,115 @@ def main():
         layout="wide",
     )
 
-    # ------- HERO / HEADER -------
-    with st.container():
-        col_left, col_right = st.columns([2, 1])
+    # ---------- GLOBAL CSS ----------
+    st.markdown(
+        """
+        <style>
+        .block-container {
+            padding-top: 1.5rem;
+            padding-bottom: 3rem;
+        }
+        .upload-card {
+            background: #ffffff;
+            border-radius: 18px;
+            padding: 24px 28px 28px 28px;
+            box-shadow: 0 18px 40px rgba(15, 23, 42, 0.08);
+            border: 1px solid rgba(226, 232, 240, 0.9);
+        }
+        .tips-card {
+            background: #f8fafc;
+            border-radius: 18px;
+            padding: 20px 24px 24px 24px;
+            border: 1px solid rgba(226, 232, 240, 0.9);
+        }
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
 
-        with col_left:
-            st.markdown(
-                """
-                <h1 style="margin-bottom:0;">Financial PDF → Google Sheet</h1>
-                <p style="color:#555;">
-                    Upload file laporan keuangan dalam bentuk PDF.<br>
-                    Bot akan mem-parsing, mengirim hasilnya ke Google Sheet
-                    <b>"FINANCIAL_REPORT"</b>, dan menyimpan PDF ke Google Drive.
-                </p>
-                """,
-                unsafe_allow_html=True,
+    # ---------- HERO BANNER ----------
+    with st.container():
+        try:
+            # Pastikan file ini ada di: assets/hero_banner.png
+            st.image("assets/hero_banner.png", use_column_width=True)
+        except Exception:
+            # Fallback kalau banner belum ada
+            st.title("Financial PDF → Google Sheet")
+            st.write(
+                "Upload file laporan keuangan dalam bentuk PDF. "
+                'Bot akan mem-parsing, mengirim hasilnya ke Google Sheet '
+                f'"{SPREADSHEET_NAME}", dan menyimpan PDF ke Google Drive.'
             )
 
-        with col_right:
-            # Bebek kuning asisten 🤖🦆
-            try:
-                st.image("assets/duck.png", width=210)
-            except Exception:
-                st.write("🦆 (duck.png belum ketemu di folder assets)")
+    st.markdown("")  # sedikit jarak di bawah banner
 
-    st.markdown("---")
+    # ---------- MAIN CONTENT ----------
+    col_upload, col_info = st.columns([1.5, 1])
 
-    # ------- MAIN CONTENT: Upload Area -------
-    col_upload, col_info = st.columns([1.4, 1])
-
+    # ====== KIRI: UPLOAD CARD ======
     with col_upload:
-        st.subheader("Upload PDF laporan")
+        st.markdown('<div class="upload-card">', unsafe_allow_html=True)
 
-        upload_box = st.empty()
-        uploaded_file = upload_box.file_uploader(
-            "Drag & drop file di sini atau klik **Browse files**",
-            type=["pdf"],
+        st.subheader("Upload PDF laporan")
+        st.caption(
+            "Drag & drop file di sini atau klik **Browse files** "
+            "(max 20MB, format PDF)."
         )
 
+        # Hilangkan label default uploader (kita pakai teks sendiri)
+        uploaded_file = st.file_uploader(
+            "Pilih file PDF",
+            type=["pdf"],
+            label_visibility="collapsed",
+        )
+
+        result = None
+
         if uploaded_file is not None:
-            # Simpan sementara
             pdf_path = "report.pdf"
             with open(pdf_path, "wb") as f:
                 f.write(uploaded_file.read())
 
-            with st.spinner("Memproses PDF, update Google Sheet & upload ke Drive..."):
+            with st.spinner(
+                "Memproses PDF, meng-update Google Sheet, dan upload ke Google Drive..."
+            ):
                 try:
                     result = process_pdf(pdf_path)
                 except Exception as e:
-                    st.error("Terjadi error saat memproses PDF / update Google.")
+                    st.error(
+                        "Terjadi error saat memproses PDF / update Google."
+                    )
                     st.exception(e)
-                    return
 
-            st.success("Selesai! ✅ Google Sheet & Google Drive sudah di-update.")
+            if result:
+                st.success("Selesai! ✅ Google Sheet & Google Drive sudah di-update.")
+                st.subheader("Ringkasan hasil")
+                st.json(result)
 
-            st.subheader("Ringkasan hasil")
-            st.json(result)
+                if result.get("drive_link"):
+                    st.markdown(
+                        f'📁 **File PDF di Google Drive:** '
+                        f'[Buka file]({result["drive_link"]})'
+                    )
 
-            # Link ke Google Drive, kalau tersedia
-            if result.get("drive_link"):
-                st.markdown(
-                    f"📁 **File PDF di Google Drive:** "
-                    f"[Buka file]({result['drive_link']})"
-                )
+        st.markdown("</div>", unsafe_allow_html=True)
 
-    # ------- SIDE INFO / FOOTER -------
+    # ====== KANAN: TIPS CARD ======
     with col_info:
+        st.markdown('<div class="tips-card">', unsafe_allow_html=True)
         st.subheader("Tips")
+
         st.markdown(
             """
             - Pastikan format PDF mengikuti template laporan keuangan InHarmony.
-            - Kalau periodenya sama (misal *Nov 2025*),  
-              data P&L / BS / Cash Flow akan diupdate di kolom periode yang sama.
-            - KPI untuk periode yang sama akan dioverwrite, bukan ditumpuk ulang.
+            - Kalau periodenya sama (misal **Nov 2025**),  
+              data **P&L / Balance Sheet / Cash Flow** akan diupdate di kolom periode yang sama.
+            - KPI untuk periode yang sama akan **dioverwrite**, tidak ditumpuk ulang.
+            - Simpan link Google Sheet & Google Drive di bookmark untuk akses cepat.
             """
         )
 
-        st.markdown("---")
-        st.markdown(
-            "<p style='text-align:center;color:#888;'>"
-            "created by <b>xlsxscn</b> • Published 2026"
-            "</p>",
-            unsafe_allow_html=True,
-        )
+        st.markdown("</div>", unsafe_allow_html=True)
 
 
 # =========================
