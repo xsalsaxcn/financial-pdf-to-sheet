@@ -135,9 +135,9 @@ def append_kpi_rows(ws, rows: list):
     ws   : worksheet object
     rows : list of rows, format:
         [
-            Period,        # kolom A
-            Category,      # kolom B
-            KPI Name,      # kolom C
+            Period,
+            Category,
+            KPI Name,
             Result,
             Result Unit,
             Target,
@@ -148,18 +148,15 @@ def append_kpi_rows(ws, rows: list):
         ]
 
     Behaviour:
-    - Kalau BELUM ada data apa pun:
-        - bikin header di baris 1
-        - append rows biasa
-    - Kalau SUDAH ada dan period yang sama pernah masuk:
-        - semua baris dengan Period tsb dihapus dulu
-        - lalu rows baru di-append (overwrite per period)
+    - Kalau sudah ada KPI dengan Period yang sama:
+        hapus SEMUA baris period tsb dulu (dalam 1 batch request),
+        lalu append rows baru → overwrite per period.
     """
 
     if not rows:
         return
 
-    # Ambil period dari baris pertama (semua baris di batch ini period-nya sama)
+    # period dari batch ini (semua baris sama period)
     period = rows[0][0]
 
     # ===== ENSURE HEADER =====
@@ -179,18 +176,34 @@ def append_kpi_rows(ws, rows: list):
             ]
         )
 
-    # ===== HAPUS DATA LAMA UNTUK PERIOD YANG SAMA =====
-    # get_all_values() -> termasuk header; index 0 = row 1
-    all_values = ws.get_all_values()
+    # ===== CARI BARIS YANG PERLU DIHAPUS UNTUK PERIOD INI =====
+    all_values = ws.get_all_values()  # termasuk header di row 1
 
     rows_to_delete = []
-    for idx, row in enumerate(all_values[1:], start=2):  # mulai dari baris ke-2 (data)
+    for idx, row in enumerate(all_values[1:], start=2):  # mulai dari baris 2 (data)
         if row and len(row) > 0 and row[0] == period:
             rows_to_delete.append(idx)
 
-    # Hapus dari bawah supaya index tidak bergeser
-    for r in reversed(rows_to_delete):
-        ws.delete_rows(r)
+    # ===== HAPUS DALAM 1 BATCH REQUEST =====
+    if rows_to_delete:
+        requests = []
+        # pakai index 0-based, endIndex exclusive
+        for r in sorted(rows_to_delete, reverse=True):
+            requests.append(
+                {
+                    "deleteDimension": {
+                        "range": {
+                            "sheetId": ws.id,
+                            "dimension": "ROWS",
+                            "startIndex": r - 1,  # row 2 -> index 1
+                            "endIndex": r,        # sampai row 2 (exclusive)
+                        }
+                    }
+                }
+            )
+
+        # Satu HTTP request ke Sheets API untuk semua delete
+        ws.spreadsheet.batch_update({"requests": requests})
 
     # ===== TULIS KPI BARU =====
     ws.append_rows(rows, value_input_option="USER_ENTERED")
