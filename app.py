@@ -47,7 +47,7 @@ def inject_css():
             padding-bottom: 3rem;
         }
 
-        /* "kartu" besar seperti mockup (nav + body) */
+        /* "kartu" besar (nav + body) */
         .shell {
             border-radius: 30px;
             overflow: hidden;
@@ -69,11 +69,12 @@ def inject_css():
         }
         .shell-nav-sub {
             font-size: 0.82rem;
-            opacity: 0.85;
+            opacity: 0.9;
         }
 
         .shell-body {
-            background: #f9fafb;
+            /* biar nyatu sama background gelap, teks nanti kita buat terang */
+            background: transparent;
             padding: 2rem 2.4rem 2.1rem 2.4rem;
         }
 
@@ -85,8 +86,9 @@ def inject_css():
             font-size: 0.75rem;
             padding: 0.25rem 0.9rem;
             border-radius: 999px;
-            background: #e5f0ff;
-            color: #1e3a8a;
+            background: rgba(15,23,42,0.9);
+            border: 1px solid rgba(148,163,184,0.5);
+            color: #e5e7eb;
             margin-bottom: 0.8rem;
         }
         .hero-badge-dot {
@@ -96,34 +98,36 @@ def inject_css():
             background: #22c55e;
         }
         .hero-title {
-            font-size: 2.1rem;
+            font-size: 2.15rem;
             font-weight: 800;
-            color: #0f172a;
+            color: #f9fafb;          /* PUTIH, jelas di background gelap */
             margin-bottom: 0.4rem;
         }
         .hero-subtitle {
             font-size: 0.95rem;
-            color: #4b5563;
+            color: #e5e7eb;          /* abu terang */
             max-width: 430px;
             margin-bottom: 1.4rem;
         }
 
-        /* panel upload di kanan */
+        /* panel upload di kanan (sengaja terang) */
         .upload-panel {
             background: #eff6ff;
             border-radius: 22px;
             border: 2px dashed #60a5fa;
             padding: 1.0rem 1.1rem 1.2rem 1.1rem;
         }
+        .upload-panel * {
+            color: #1e293b !important;   /* teks di panel tetap gelap & jelas */
+        }
         .upload-title {
             font-weight: 600;
-            color: #1e293b;
             margin-bottom: 0.25rem;
             font-size: 0.96rem;
         }
         .upload-sub {
             font-size: 0.82rem;
-            color: #64748b;
+            color: #64748b !important;
             margin-bottom: 0.6rem;
         }
 
@@ -146,11 +150,11 @@ def inject_css():
         /* tips */
         .tips-wrapper {
             margin-top: 1.7rem;
-            background: #0b1120;
+            background: rgba(15,23,42,0.96);
             color: #e5e7eb;
             border-radius: 20px;
             padding: 1rem 1.6rem 1.1rem 1.6rem;
-            box-shadow: 0 18px 45px rgba(15,23,42,0.85);
+            box-shadow: 0 18px 45px rgba(15,23,42,0.9);
             font-size: 0.9rem;
         }
         .tips-title {
@@ -160,6 +164,9 @@ def inject_css():
         .tips-ul {
             margin: 0.25rem 0 0 0;
             padding-left: 1.1rem;
+        }
+        .tips-ul li {
+            margin-bottom: 0.15rem;
         }
 
         /* footer */
@@ -331,7 +338,7 @@ def main():
     # ---------- BANNER FLOW ----------
     st.markdown('<div class="flow-card">', unsafe_allow_html=True)
     st.markdown(
-        '<div class="flow-caption">How it works</div>',
+        '<div class="flow-caption">HOW IT WORKS</div>',
         unsafe_allow_html=True,
     )
     st.image("assets/flow_banner.png", use_column_width=True)
