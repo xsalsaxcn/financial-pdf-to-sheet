@@ -1,7 +1,7 @@
 # app.py
 import os
 import streamlit as st
-from main import process_pdf  # fungsi utama yang kita buat di main.py
+from main import process_pdf  # pastikan main.py punya fungsi process_pdf(pdf_path)
 
 # =========================
 # PAGE CONFIG
@@ -13,7 +13,7 @@ st.set_page_config(
 )
 
 # =========================
-# GLOBAL STYLE
+# GLOBAL STYLE (UPDATED)
 # =========================
 st.markdown(
     """
@@ -29,18 +29,16 @@ st.markdown(
                      "Segoe UI", sans-serif;
     }
 
-    /* Semua heading & teks default jadi terang */
     h1, h2, h3, h4, h5, h6,
     .stMarkdown, .stText, .stTooltipContent, label, p, li, span {
         color: #f5f7fb !important;
     }
 
-    /* Hilangkan blok putih besar default di atas (container utama) */
     [data-testid="stHeader"] {
         background: transparent !important;
     }
 
-    /* Navbar mini paling atas */
+    /* NAV BAR */
     .nav-bar {
         font-size: 0.85rem;
         letter-spacing: 0.04em;
@@ -58,7 +56,6 @@ st.markdown(
         align-items: center;
         gap: 0.35rem;
     }
-
     .nav-dot {
         width: 8px;
         height: 8px;
@@ -68,7 +65,6 @@ st.markdown(
         display: inline-block;
     }
 
-    /* Badge kecil di bawah nav */
     .pill-badge {
         display: inline-flex;
         align-items: center;
@@ -88,7 +84,7 @@ st.markdown(
         background: #22c55e;
     }
 
-    /* Hero title & sub */
+    /* HERO TEXT */
     .hero-title {
         font-size: 2.4rem;
         font-weight: 800;
@@ -103,68 +99,91 @@ st.markdown(
         line-height: 1.5;
     }
 
-    /* Upload card */
+    /* UPLOAD CARD – dibesarkan */
     .upload-card {
         background: linear-gradient(145deg,
                     rgba(15, 23, 42, 0.96),
                     rgba(15, 23, 42, 0.9));
-        border-radius: 1.2rem;
-        padding: 1.1rem 1.25rem 1.2rem 1.25rem;
+        border-radius: 1.4rem;
+        padding: 1.4rem 1.6rem 1.5rem 1.6rem; /* LEBIH BESAR */
         box-shadow:
-            0 24px 60px rgba(0, 0, 0, 0.7),
-            0 0 0 1px rgba(148, 163, 184, 0.3);
-        border: 1px solid rgba(148, 163, 184, 0.6);
+            0 26px 70px rgba(0, 0, 0, 0.75),
+            0 0 0 1px rgba(148, 163, 184, 0.35);
+        border: 1px solid rgba(148, 163, 184, 0.7);
     }
     .upload-title {
-        font-size: 0.98rem;
+        font-size: 1.02rem;
         font-weight: 600;
-        margin-bottom: 0.2rem;
+        margin-bottom: 0.25rem;
         color: #f9fafb;
     }
     .upload-sub {
-        font-size: 0.8rem;
+        font-size: 0.85rem;
         color: #d1d5db;
-        margin-bottom: 0.6rem;
+        margin-bottom: 0.8rem;
     }
 
-    /* File uploader styling */
+    /* ==== FILE UPLOADER: DIGABUNG JADI SATU BLOK === */
+
+    /* Hapus kotak kedua (blok putih) di luar */
     div[data-testid="stFileUploader"] {
-        background: radial-gradient(circle at top,
-                    rgba(37, 99, 235, 0.18),
-                    rgba(15, 23, 42, 0.98));
-        border-radius: 0.9rem;
-        border: 1px dashed rgba(148, 163, 184, 0.9);
-        padding: 0.75rem 0.9rem;
+        background: transparent !important;
+        border: none !important;
+        padding: 0 !important;
+        margin-top: 0.2rem;
     }
 
+    /* Blok utama klik/drag */
+    div[data-testid="stFileUploader"] > div {
+        background: radial-gradient(circle at top left,
+                    rgba(37, 99, 235, 0.25),
+                    rgba(15, 23, 42, 0.98));
+        border-radius: 1.1rem;
+        border: 1px dashed rgba(148, 163, 184, 0.9);
+        padding: 0.9rem 1.1rem;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 0.9rem;
+        box-shadow: 0 18px 45px rgba(15, 23, 42, 0.95);
+    }
+
+    /* Hilangkan label default supaya lebih clean */
+    div[data-testid="stFileUploader"] label {
+        display: none !important;
+    }
+
+    /* Teks di sisi kiri (drag & drop, limit, dll) */
+    div[data-testid="stFileUploader"] span {
+        color: #e5e7eb !important;
+        font-size: 0.87rem !important;
+    }
+
+    /* Icon cloud – diperbesar */
     div[data-testid="stFileUploader"] svg {
-        width: 30px;
-        height: 30px;
+        width: 42px;
+        height: 42px;
         stroke-width: 1.7;
     }
 
-    div[data-testid="stFileUploader"] label {
-        font-size: 0.87rem;
-        color: #e5e7eb !important;
-    }
-
-    /* Button Browse files */
+    /* Tombol Browse files – tetap kuning, menempel di blok */
     div[data-testid="stFileUploader"] button {
         border-radius: 999px;
-        padding: 0.25rem 1.1rem;
-        font-size: 0.85rem;
+        padding: 0.35rem 1.4rem;
+        font-size: 0.9rem;
         font-weight: 600;
         background: linear-gradient(135deg, #facc15, #fb923c);
         color: #111827 !important;
         border: none;
-        box-shadow: 0 10px 30px rgba(251, 191, 36, 0.4);
+        box-shadow: 0 12px 32px rgba(251, 191, 36, 0.5);
+        margin-left: 0.5rem;
     }
     div[data-testid="stFileUploader"] button:hover {
         filter: brightness(1.05);
-        box-shadow: 0 14px 35px rgba(251, 191, 36, 0.55);
+        box-shadow: 0 16px 38px rgba(251, 191, 36, 0.65);
     }
 
-    /* Section divider */
+    /* SECTION DIVIDER */
     .section-divider {
         height: 6px;
         border-radius: 999px;
@@ -174,8 +193,6 @@ st.markdown(
                     rgba(148, 163, 184, 0.1));
         margin: 0.4rem 0 1.1rem 0;
     }
-
-    /* Section title */
     .section-label {
         font-size: 0.78rem;
         letter-spacing: 0.2em;
@@ -184,7 +201,7 @@ st.markdown(
         margin-bottom: 0.2rem;
     }
 
-    /* Tips card */
+    /* TIPS CARD */
     .tips-card {
         background: radial-gradient(circle at top left,
                     rgba(30, 64, 175, 0.35),
@@ -200,7 +217,6 @@ st.markdown(
         font-size: 0.9rem;
     }
 
-    /* Footer */
     .footer-text {
         font-size: 0.72rem;
         color: #cbd5ff;
@@ -240,7 +256,7 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-st.write("")  # sedikit jarak
+st.write("")
 
 # =========================
 # HERO SECTION
@@ -271,7 +287,7 @@ with right:
         <div class="upload-card">
             <div class="upload-title">Upload Financial PDF Report</div>
             <div class="upload-sub">
-                Drag & drop atau klik tombol di bawah (maks 20MB, PDF).
+                Drag &amp; drop atau klik tombol di bawah (maks 20MB, PDF).
             </div>
         """,
         unsafe_allow_html=True,
@@ -283,7 +299,7 @@ with right:
         key="pdf_uploader_main",
     )
 
-    st.markdown("</div>", unsafe_allow_html=True)  # close upload-card
+    st.markdown("</div>", unsafe_allow_html=True)  # tutup upload-card
 
 # =========================
 # PROSES PDF
@@ -311,7 +327,7 @@ if result:
             unsafe_allow_html=False,
         )
 
-st.write("")  # spasi sebelum sections
+st.write("")
 
 # =========================
 # HOW IT WORKS
@@ -321,8 +337,7 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-how_it_works_path = "assets/how_it_works.png"  # pastikan file ini ADA
-
+how_it_works_path = "assets/how_it_works.png"
 if os.path.exists(how_it_works_path):
     st.image(how_it_works_path, use_column_width=True)
 else:
@@ -341,20 +356,19 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-with st.container():
-    st.markdown(
-        """
-        <div class="tips-card">
-        <ul>
-            <li>Pastikan format PDF mengikuti template laporan keuangan InHarmony.</li>
-            <li>Kalau periodenya sama (misal <strong>Nov 2025</strong>), data P&amp;L / BS / Cash Flow akan diupdate di kolom periode yang sama.</li>
-            <li>KPI untuk periode yang sama akan <strong>dioverwrite</strong>, tidak ditumpuk ulang.</li>
-            <li>Simpan link Google Sheet &amp; Google Drive di bookmark untuk akses cepat.</li>
-        </ul>
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
+st.markdown(
+    """
+    <div class="tips-card">
+    <ul>
+        <li>Pastikan format PDF mengikuti template laporan keuangan InHarmony.</li>
+        <li>Kalau periodenya sama (misal <strong>Nov 2025</strong>), data P&amp;L / BS / Cash Flow akan diupdate di kolom periode yang sama.</li>
+        <li>KPI untuk periode yang sama akan <strong>dioverwrite</strong>, tidak ditumpuk ulang.</li>
+        <li>Simpan link Google Sheet &amp; Google Drive di bookmark untuk akses cepat.</li>
+    </ul>
+    </div>
+    """,
+    unsafe_allow_html=True,
+)
 
 # =========================
 # FOOTER
