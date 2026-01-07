@@ -11,7 +11,7 @@ SCOPES = ["https://www.googleapis.com/auth/drive"]
 # Pakai folder "Financial Reports" yang sekarang sudah ada
 # Ambil ID dari URL:
 # https://drive.google.com/drive/folders/XXXXXXXXXXXX  -> pakai "XXXXXXXXXXXX"
-ROOT_FOLDER_ID = "GANTI_DENGAN_FOLDER_ID_FINANCIAL_REPORTS"
+ROOT_FOLDER_ID = "12934i5FjV9OA96tU3OXBhmyHpGflXjXF"
 
 
 def get_drive_service():
