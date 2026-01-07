@@ -15,7 +15,8 @@ KPI_CATEGORIES = {
 }
 
 IMPORTANCE_LEVELS = ["Critical", "High", "Medium", "Low"]
-KNOWN_UNITS = ["%", "times", "days", "yrs", "Rp"]
+# unit yang muncul sebagai token terpisah
+KNOWN_UNITS = ["%", "times", "days", "yrs"]
 
 # =============================
 # HELPERS
@@ -23,25 +24,75 @@ KNOWN_UNITS = ["%", "times", "days", "yrs", "Rp"]
 def clean_number(value: str):
     if not value:
         return None
+    # hilangkan separator ribuan ala Indonesia
     value = value.replace(".", "").replace(",", ".")
     try:
         return float(value)
-    except:
+    except Exception:
         return None
 
 
 def normalize_line(line: str) -> str:
     line = line.replace("*", "")
-    line = re.sub(r"(\d)(-)", r"\1 -", line)  # fix -71days
+    # coba rapikan kasus "-71days" jadi "-71 days"
+    line = re.sub(r"(\d)(-)", r"\1 -", line)
     return line.strip()
 
 
-def split_value_unit(token):
+def split_value_unit(token: str):
+    """
+    Pecah 1 token menjadi (angka, unit) jika nempel.
+    Contoh:
+      '59,67%' -> (59.67, '%')
+      '1,84'   -> (1.84, '')
+      'Rp2.722.196.641' -> (2722196641.0, 'Rp')
+    """
+    if not token:
+        return None, ""
+
+    # khusus currency Rp di depan
+    if token.startswith("Rp"):
+        num = token[2:]
+        return clean_number(num), "Rp"
+
+    # unit nempel di belakang: 59,67% / 45days / 1,84times
     for unit in KNOWN_UNITS:
         if token.endswith(unit):
-            num = token.replace(unit, "")
+            num = token[: -len(unit)]
             return clean_number(num), unit
+
+    # cuma angka
     return clean_number(token), ""
+
+
+def extract_value_from_tail(tokens):
+    """
+    Ambil 1 nilai (value + optional unit) dari ujung kanan list token,
+    lalu kembalikan (value, unit, sisa_tokens).
+    """
+    if not tokens:
+        return None, "", tokens
+
+    last = tokens[-1]
+
+    # kasus unit jadi token terpisah: "1,84 times"
+    if last in KNOWN_UNITS:
+        unit = last
+        if len(tokens) >= 2:
+            value_token = tokens[-2]
+            value, extra_unit = split_value_unit(value_token)
+            if extra_unit and not unit:
+                unit = extra_unit
+            remaining = tokens[:-2]
+        else:
+            value = None
+            remaining = tokens[:-1]
+    else:
+        # kasus "59,67%" atau "Rp2.7..."
+        value, unit = split_value_unit(last)
+        remaining = tokens[:-1]
+
+    return value, unit, remaining
 
 
 # =============================
@@ -57,15 +108,16 @@ def parse_kpi_result(text: str, period: str):
             continue
 
         # === CATEGORY DETECTION ===
-        for k, v in KPI_CATEGORIES.items():
-            if k in line:
-                current_category = v
+        for key, cat in KPI_CATEGORIES.items():
+            if key in line:
+                current_category = cat
                 break
 
         if not current_category:
+            # belum ketemu kategori, skip
             continue
 
-        # === IMPORTANCE ===
+        # === IMPORTANCE (selalu di ujung) ===
         importance = None
         for lvl in IMPORTANCE_LEVELS:
             if line.endswith(lvl):
@@ -77,41 +129,38 @@ def parse_kpi_result(text: str, period: str):
 
         tokens = line.split()
 
+        # pakai posisi terakhir importance (jaga-jaga kalau ada di tengah)
         try:
-            idx = tokens.index(importance)
-
-            # ===== TREND =====
-            trend_val, trend_unit = split_value_unit(tokens[idx - 2])
-            if tokens[idx - 1] in KNOWN_UNITS:
-                trend_unit = tokens[idx - 1]
-
-            # ===== TARGET =====
-            target_val, target_unit = split_value_unit(tokens[idx - 4])
-            if tokens[idx - 3] in KNOWN_UNITS:
-                target_unit = tokens[idx - 3]
-
-            # ===== RESULT =====
-            result_val, result_unit = split_value_unit(tokens[idx - 6])
-            if tokens[idx - 5] in KNOWN_UNITS:
-                result_unit = tokens[idx - 5]
-
-            # ===== KPI NAME =====
-            kpi_name = " ".join(tokens[: idx - 6])
-
-            rows.append([
-                period,
-                current_category,
-                kpi_name.strip(),
-                result_val,
-                result_unit,
-                target_val,
-                target_unit,
-                trend_val,
-                trend_unit,
-                importance
-            ])
-
-        except Exception:
+            idx_imp = max(i for i, t in enumerate(tokens) if t == importance)
+        except ValueError:
             continue
+
+        tokens_no_imp = tokens[:idx_imp]
+
+        try:
+            # urutan dari kanan: TREND, TARGET, RESULT
+            trend_val, trend_unit, tokens_no_imp = extract_value_from_tail(tokens_no_imp)
+            target_val, target_unit, tokens_no_imp = extract_value_from_tail(tokens_no_imp)
+            result_val, result_unit, tokens_no_imp = extract_value_from_tail(tokens_no_imp)
+        except Exception:
+            # kalau parsing gagal, skip baris
+            continue
+
+        kpi_name = " ".join(tokens_no_imp).strip()
+        if not kpi_name:
+            continue
+
+        rows.append([
+            period,
+            current_category,
+            kpi_name,
+            result_val,
+            result_unit,
+            target_val,
+            target_unit,
+            trend_val,
+            trend_unit,
+            importance,
+        ])
 
     return rows
