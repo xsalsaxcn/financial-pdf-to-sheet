@@ -1,5 +1,3 @@
-# app.py
-
 import streamlit as st
 
 from extract_pdf import extract_text
@@ -15,7 +13,7 @@ from google_sheet import (
     append_kpi_rows,
 )
 
-from upload_to_drive import upload_pdf_to_drive  # sudah kamu pakai sebelumnya
+from upload_to_drive import upload_pdf_to_drive
 
 
 # =========================
@@ -31,150 +29,150 @@ st.set_page_config(
 
 
 # =========================
-# GLOBAL CSS
+# GLOBAL CSS (LAYOUT & THEME)
 # =========================
 def inject_css():
     st.markdown(
         """
         <style>
+        /* background halaman */
         .stApp {
-            background: radial-gradient(circle at top, #14284b 0, #071324 45%, #040814 100%);
-            color: #0f172a;
+            background: radial-gradient(circle at top, #111827 0, #020617 55%, #020617 100%);
         }
 
+        /* container utama */
         .block-container {
-            max-width: 1150px;
-            padding-top: 1.5rem;
+            max-width: 1100px;
+            padding-top: 2.3rem;
             padding-bottom: 3rem;
         }
 
-        .top-nav {
-            background: #050a16;
-            color: #e5e7eb;
-            padding: 0.6rem 1.6rem;
-            border-radius: 0 0 18px 18px;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            box-shadow: 0 14px 35px rgba(0,0,0,0.45);
+        /* "kartu" besar seperti mockup (nav + body) */
+        .shell {
+            border-radius: 30px;
+            overflow: hidden;
+            box-shadow:
+                0 26px 70px rgba(15,23,42,0.85),
+                0 0 0 1px rgba(15,23,42,0.45);
         }
-        .top-nav-title {
+
+        .shell-nav {
+            background: #020617;
+            color: #e5e7eb;
+            padding: 0.75rem 1.8rem;
+            display: flex;
+            align-items: baseline;
+            gap: 8px;
+        }
+        .shell-nav-title {
             font-weight: 600;
         }
-        .top-nav-sub {
-            font-size: 0.83rem;
-            opacity: 0.9;
+        .shell-nav-sub {
+            font-size: 0.82rem;
+            opacity: 0.85;
         }
 
-        .hero-card {
-            margin-top: 1.8rem;
+        .shell-body {
             background: #f9fafb;
-            border-radius: 24px;
-            padding: 2.2rem 2.4rem 2.0rem 2.4rem;
-            box-shadow:
-                0 25px 60px rgba(15,23,42,0.45),
-                0 0 0 1px rgba(15,23,42,0.06);
-        }
-        .hero-title {
-            font-size: 2.15rem;
-            font-weight: 800;
-            color: #0f172a;
-            margin-bottom: 0.45rem;
-        }
-        .hero-subtitle {
-            font-size: 0.98rem;
-            color: #4b5563;
-            max-width: 560px;
-            margin-bottom: 1.6rem;
+            padding: 2rem 2.4rem 2.1rem 2.4rem;
         }
 
-        .hero-pill {
+        /* hero kiri: teks */
+        .hero-badge {
             display: inline-flex;
             align-items: center;
             gap: 6px;
-            background: #0f172a;
-            color: #e5e7eb;
             font-size: 0.75rem;
             padding: 0.25rem 0.9rem;
             border-radius: 999px;
-            margin-bottom: 1rem;
+            background: #e5f0ff;
+            color: #1e3a8a;
+            margin-bottom: 0.8rem;
         }
-        .hero-pill-dot {
+        .hero-badge-dot {
             width: 7px;
             height: 7px;
             border-radius: 999px;
             background: #22c55e;
         }
+        .hero-title {
+            font-size: 2.1rem;
+            font-weight: 800;
+            color: #0f172a;
+            margin-bottom: 0.4rem;
+        }
+        .hero-subtitle {
+            font-size: 0.95rem;
+            color: #4b5563;
+            max-width: 430px;
+            margin-bottom: 1.4rem;
+        }
 
-        .upload-card {
-            background: #0b172a;
-            border-radius: 20px;
-            padding: 1.3rem 1.3rem 1.5rem 1.3rem;
-            box-shadow:
-                0 20px 50px rgba(15,23,42,0.7),
-                0 0 0 1px rgba(148,163,184,0.25);
-            border: 1px solid rgba(148,163,184,0.5);
+        /* panel upload di kanan */
+        .upload-panel {
+            background: #eff6ff;
+            border-radius: 22px;
+            border: 2px dashed #60a5fa;
+            padding: 1.0rem 1.1rem 1.2rem 1.1rem;
         }
         .upload-title {
-            color: #e5e7eb;
             font-weight: 600;
-            margin-bottom: 0.4rem;
+            color: #1e293b;
+            margin-bottom: 0.25rem;
+            font-size: 0.96rem;
         }
         .upload-sub {
             font-size: 0.82rem;
-            color: #9ca3af;
-            margin-bottom: 0.8rem;
-        }
-        .upload-inner {
-            background: #f9fafb;
-            border-radius: 999px;
-            padding: 0.15rem 0.9rem;
+            color: #64748b;
+            margin-bottom: 0.6rem;
         }
 
+        /* banner flow */
         .flow-card {
-            margin-top: 1.6rem;
-            background: linear-gradient(135deg, #020617 0, #020617 45%, #020617 100%);
+            margin-top: 1.5rem;
+            background: #020617;
             border-radius: 22px;
-            padding: 1.1rem 1.5rem 1.3rem 1.5rem;
-            box-shadow: 0 20px 55px rgba(15,23,42,0.7);
-            border: 1px solid rgba(148,163,184,0.35);
+            padding: 1.0rem 1.3rem 1.3rem 1.3rem;
+            box-shadow: 0 18px 55px rgba(15,23,42,0.85);
         }
         .flow-caption {
             font-size: 0.8rem;
+            letter-spacing: 0.18em;
             text-transform: uppercase;
-            letter-spacing: 0.16em;
             color: #9ca3af;
-            margin-bottom: 0.35rem;
+            margin-bottom: 0.4rem;
         }
 
-        .tips-card {
-            margin-top: 1.8rem;
-            background: rgba(15,23,42,0.92);
-            border-radius: 999px;
-            padding: 0.9rem 1.8rem;
+        /* tips */
+        .tips-wrapper {
+            margin-top: 1.7rem;
+            background: #0b1120;
             color: #e5e7eb;
+            border-radius: 20px;
+            padding: 1rem 1.6rem 1.1rem 1.6rem;
+            box-shadow: 0 18px 45px rgba(15,23,42,0.85);
             font-size: 0.9rem;
-            box-shadow: 0 16px 40px rgba(15,23,42,0.7);
         }
         .tips-title {
             font-weight: 600;
-            margin-bottom: 0.25rem;
+            margin-bottom: 0.2rem;
         }
         .tips-ul {
-            margin: 0.3rem 0 0.1rem 0;
+            margin: 0.25rem 0 0 0;
             padding-left: 1.1rem;
         }
 
+        /* footer */
         .footer {
-            margin-top: 2.1rem;
+            margin-top: 1.6rem;
             text-align: center;
             font-size: 0.8rem;
             color: #9ca3af;
-            opacity: 0.9;
         }
 
+        /* kecilkan jarak default antara markdown */
         .element-container:has(> .stMarkdown) {
-            margin-bottom: 0.4rem;
+            margin-bottom: 0.2rem;
         }
         </style>
         """,
@@ -263,27 +261,31 @@ def process_pdf(pdf_path: str = "report.pdf") -> dict:
 def main():
     inject_css()
 
-    # ---------- TOP NAV ----------
+    # ---------- SHELL (NAV + BODY DALAM 1 KARTU) ----------
+    st.markdown('<div class="shell">', unsafe_allow_html=True)
+
+    # NAV BAR
     st.markdown(
         """
-        <div class="top-nav">
-            <div class="top-nav-title">Financial Report Upload</div>
-            <div class="top-nav-sub"> • Upload PDF → Auto Parse → Google Sheet & Drive</div>
+        <div class="shell-nav">
+            <div class="shell-nav-title">Financial Report Upload</div>
+            <div class="shell-nav-sub">• Upload PDF → Auto Parse → Google Sheet & Drive</div>
         </div>
         """,
         unsafe_allow_html=True,
     )
 
-    # ---------- HERO CARD ----------
-    st.markdown('<div class="hero-card">', unsafe_allow_html=True)
-    col_left, col_right = st.columns([1.35, 1])
+    # BODY KARTU
+    st.markdown('<div class="shell-body">', unsafe_allow_html=True)
 
-    # LEFT: title + duck
+    col_left, col_center, col_right = st.columns([1.2, 1.0, 1.25])
+
+    # ----- LEFT: TITLE & DESKRIPSI -----
     with col_left:
         st.markdown(
             """
-            <div class="hero-pill">
-                <div class="hero-pill-dot"></div>
+            <div class="hero-badge">
+                <div class="hero-badge-dot"></div>
                 <span>InHarmony Financial Automation</span>
             </div>
             """,
@@ -294,32 +296,39 @@ def main():
             <div class="hero-title">Automate Your Financial Data Flow</div>
             <div class="hero-subtitle">
                 Effortless reporting with a friendly guide. Upload laporan keuangan PDF,
-                biarkan bot kirim ke Google Sheet <b>"FINANCIAL_REPORT"</b> dan PDF-nya
-                otomatis tersimpan di Google Drive.
+                biarkan bot mengirim angka ke Google Sheet <b>"FINANCIAL_REPORT"</b> dan
+                menyimpan PDF-nya di Google Drive.
             </div>
             """,
             unsafe_allow_html=True,
         )
-        st.image("assets/duck.png", width=200)
 
-    # RIGHT: upload card
+    # ----- CENTER: BEBEK -----
+    with col_center:
+        st.image("assets/duck.png", use_column_width=True)
+
+    # ----- RIGHT: UPLOAD PANEL -----
     uploaded_file = None
     with col_right:
-        st.markdown('<div class="upload-card">', unsafe_allow_html=True)
+        st.markdown('<div class="upload-panel">', unsafe_allow_html=True)
         st.markdown(
             """
-            <div class="upload-title">Drag and drop file here</div>
-            <div class="upload-sub">Limit 20MB per file • PDF</div>
+            <div class="upload-title">Upload Financial PDF Report</div>
+            <div class="upload-sub">Drag & drop atau klik tombol di bawah (max 20MB, PDF).</div>
             """,
             unsafe_allow_html=True,
         )
-        st.markdown('<div class="upload-inner">', unsafe_allow_html=True)
-        uploaded_file = st.file_uploader(" ", type=["pdf"], label_visibility="collapsed")
+        uploaded_file = st.file_uploader(
+            " ",
+            type=["pdf"],
+            label_visibility="collapsed",
+        )
         st.markdown("</div>", unsafe_allow_html=True)
-        st.markdown("</div>", unsafe_allow_html=True)
-    st.markdown("</div>", unsafe_allow_html=True)  # hero-card
 
-    # ---------- FLOW BANNER ----------
+    st.markdown("</div>", unsafe_allow_html=True)  # close shell-body
+    st.markdown("</div>", unsafe_allow_html=True)  # close shell
+
+    # ---------- BANNER FLOW ----------
     st.markdown('<div class="flow-card">', unsafe_allow_html=True)
     st.markdown(
         '<div class="flow-caption">How it works</div>',
@@ -328,7 +337,7 @@ def main():
     st.image("assets/flow_banner.png", use_column_width=True)
     st.markdown("</div>", unsafe_allow_html=True)
 
-    # ---------- PROCESS UPLOADED FILE ----------
+    # ---------- PROSES FILE ----------
     result = None
     if uploaded_file is not None:
         pdf_path = "report.pdf"
@@ -346,13 +355,14 @@ def main():
         st.success("Selesai! ✅ Google Sheet & Google Drive sudah di-update.")
 
     # ---------- TIPS ----------
-    st.markdown('<div class="tips-card">', unsafe_allow_html=True)
+    st.markdown('<div class="tips-wrapper">', unsafe_allow_html=True)
     st.markdown('<div class="tips-title">Tips penggunaan</div>', unsafe_allow_html=True)
     st.markdown(
         """
         <ul class="tips-ul">
             <li>Pastikan format PDF mengikuti template laporan keuangan InHarmony.</li>
-            <li>Kalau periodenya sama (misal <b>Nov 2025</b>), data P&amp;L / BS / Cash Flow akan diupdate di kolom periode yang sama.</li>
+            <li>Kalau periodenya sama (misal <b>Nov 2025</b>), data P&amp;L / BS / Cash Flow
+                akan diupdate di kolom periode yang sama.</li>
             <li>KPI untuk periode yang sama akan <b>dioverwrite</b>, tidak ditumpuk ulang.</li>
             <li>Simpan link Google Sheet &amp; Google Drive di bookmark untuk akses cepat.</li>
         </ul>
@@ -361,7 +371,7 @@ def main():
     )
     st.markdown("</div>", unsafe_allow_html=True)
 
-    # ---------- RESULT JSON + DRIVE LINK ----------
+    # ---------- RINGKASAN HASIL ----------
     if result is not None:
         st.subheader("Ringkasan hasil")
         st.json(result)
