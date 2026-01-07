@@ -14,23 +14,34 @@ from google_sheet import (
     connect_sheet,
     get_or_create_worksheet,
     upsert_financial_data,
-    append_kpi_rows
+    append_kpi_rows,
 )
 
 
 # =========================
 # CONFIG
 # =========================
-PDF_PATH = "report.pdf"
+DEFAULT_PDF_PATH = "report.pdf"
 SPREADSHEET_NAME = "FINANCIAL_REPORT"
 
 
 # =========================
-# MAIN FUNCTION
+# CORE PIPELINE FUNCTION
+# (bisa dipanggil dari Streamlit / CLI)
 # =========================
-def main():
+def run_pipeline(pdf_path: str = DEFAULT_PDF_PATH):
+    """
+    Jalankan seluruh pipeline:
+    - Baca & parse PDF
+    - Upload PDF ke Google Drive
+    - Update Google Sheet (P&L, BS, CF, KPI)
+    - Simpan link PDF di sheet META
+
+    Return: dict ringkasan hasil
+    """
+
     print("📄 Reading PDF...")
-    text = extract_text(PDF_PATH)
+    text = extract_text(pdf_path)
 
     print("🗓️ Detecting period...")
     period = detect_period(text)
@@ -55,7 +66,7 @@ def main():
     # UPLOAD PDF → DRIVE
     # =====================
     print("☁️ Uploading PDF to Google Drive...")
-    drive_link = upload_pdf_to_drive(PDF_PATH, period)
+    drive_link = upload_pdf_to_drive(pdf_path, period)
     print("📎 Drive Link:", drive_link)
 
     # =====================
@@ -101,9 +112,23 @@ def main():
 
     print("✅ ALL FINANCIAL DATA SUCCESSFULLY UPDATED")
 
+    # Ringkasan hasil buat ditampilkan di UI / log
+    return {
+        "period": period,
+        "pl_rows": len(pl_data),
+        "bs_rows": len(bs_data),
+        "cf_rows": len(cf_data),
+        "kpi_rows": len(kpi_rows),
+        "drive_link": drive_link,
+    }
+
 
 # =========================
-# ENTRY POINT
+# ENTRY POINT (CLI)
 # =========================
 if __name__ == "__main__":
-    main()
+    # Kalau dijalankan dengan:
+    #   python main.py
+    # dia akan pakai DEFAULT_PDF_PATH ("report.pdf")
+    result = run_pipeline(DEFAULT_PDF_PATH)
+    print(result)
