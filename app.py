@@ -3,130 +3,261 @@
 # =========================
 import streamlit as st
 
-from extract_pdf import extract_text
-
-from parse_pl import detect_period, parse_profit_loss
-from parse_bs import parse_balance_sheet
-from parse_cashflow import parse_cashflow
-from parse_kpi import parse_kpi_result
-
-from google_sheet import (
-    connect_sheet,
-    get_or_create_worksheet,
-    upsert_financial_data,
-    append_kpi_rows,
-)
-
-from upload_to_drive import upload_pdf_to_drive  # <--- TAMBAHAN
+# ganti ini sesuai file tempat process_pdf kamu berada
+from main import process_pdf   # <-- SESUAIKAN JIKA PERLU
 
 
 # =========================
-# CONFIG
+# STYLE HELPER
 # =========================
-SPREADSHEET_NAME = "FINANCIAL_REPORT"
+def inject_css():
+    st.markdown(
+        """
+        <style>
+        /* Hilangkan padding default di atas */
+        .block-container {
+            padding-top: 1.5rem;
+            padding-bottom: 3rem;
+        }
 
+        /* Top nav bar */
+        .top-nav {
+            background: #0F172A; /* navy */
+            color: white;
+            padding: 0.8rem 1.5rem;
+            border-radius: 0.75rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 1.2rem;
+        }
+        .top-nav-left {
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+            font-weight: 600;
+            letter-spacing: 0.03em;
+            font-size: 0.9rem;
+            text-transform: uppercase;
+        }
+        .top-nav-tag {
+            background: rgba(37, 99, 235, 0.15);
+            border-radius: 999px;
+            padding: 0.15rem 0.7rem;
+            font-size: 0.75rem;
+        }
+        .top-nav-right {
+            font-size: 0.8rem;
+            opacity: 0.8;
+        }
 
-# =========================
-# CORE PROCESS FUNCTION
-# =========================
-def process_pdf(pdf_path: str = "report.pdf"):
-    """
-    Baca PDF, parse semua section, upload PDF ke Google Drive,
-    dan update Google Sheet (P&L, BS, CF, KPI, META).
-    Return dict ringkasan hasil.
-    """
+        /* Hero wrapper */
+        .hero-wrapper {
+            background: radial-gradient(circle at top left, #EFF6FF 0, #FFFFFF 50%, #E5E7EB 100%);
+            border-radius: 1.5rem;
+            padding: 1.8rem 1.8rem 1.4rem 1.8rem;
+            border: 1px solid rgba(15,23,42,0.06);
+            box-shadow: 0 18px 40px rgba(15,23,42,0.07);
+            margin-bottom: 1.8rem;
+        }
 
-    # ====== BACA & PARSE PDF ======
-    print("📄 Reading PDF...")
-    text = extract_text(pdf_path)
+        .hero-title {
+            font-size: 2.1rem;
+            font-weight: 700;
+            color: #0F172A;
+            margin-bottom: 0.5rem;
+        }
 
-    print("🗓️ Detecting period...")
-    period = detect_period(text)
-    print("Period:", period)
+        .hero-subtitle {
+            font-size: 0.98rem;
+            color: #4B5563;
+            max-width: 420px;
+            margin-bottom: 1.1rem;
+        }
 
-    print("📊 Parsing P&L...")
-    pl_data = parse_profit_loss(text)
+        .hero-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+            font-size: 0.8rem;
+            padding: 0.25rem 0.8rem;
+            border-radius: 999px;
+            background: rgba(22,163,74,0.08);
+            color: #14532D;
+            margin-bottom: 0.8rem;
+        }
 
-    print("🏦 Parsing Balance Sheet...")
-    bs_data = parse_balance_sheet(text)
+        .hero-pill span.dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 999px;
+            background: #22C55E;
+        }
 
-    print("💰 Parsing Cash Flow...")
-    cf_data = parse_cashflow(text)
+        /* Upload card */
+        .upload-card {
+            background: rgba(255,255,255,0.88);
+            backdrop-filter: blur(10px);
+            border-radius: 1.2rem;
+            border: 1px solid rgba(148,163,184,0.4);
+            padding: 1.2rem 1.1rem 1.1rem 1.1rem;
+            box-shadow: 0 10px 25px rgba(15,23,42,0.08);
+            transition: all 0.18s ease-out;
+        }
+        .upload-card:hover {
+            box-shadow: 0 16px 35px rgba(15,23,42,0.18);
+            transform: translateY(-2px);
+            border-color: rgba(37,99,235,0.45);
+        }
 
-    print("📈 Parsing KPI Result...")
-    kpi_rows = parse_kpi_result(text, period)
+        .upload-title {
+            font-size: 0.95rem;
+            font-weight: 600;
+            color: #0F172A;
+            margin-bottom: 0.3rem;
+        }
 
-    # ====== UPLOAD PDF KE GOOGLE DRIVE ======
-    print("☁️ Uploading PDF to Google Drive...")
-    drive_link = upload_pdf_to_drive(pdf_path, period)
-    print("📎 Drive Link:", drive_link)
+        .upload-caption {
+            font-size: 0.8rem;
+            color: #6B7280;
+            margin-bottom: 0.6rem;
+        }
 
-    # ====== UPDATE GOOGLE SHEET ======
-    print("🔗 Connecting to Google Sheet...")
-    sheet = connect_sheet(SPREADSHEET_NAME)
+        /* Mengatur uploader bawaan Streamlit agar muat di card */
+        .upload-card .stFileUploader {
+            padding: 0.4rem 0.4rem 0.2rem 0.4rem;
+            border-radius: 0.9rem;
+            border: 1px dashed #BFDBFE;
+            background: #F9FAFB;
+        }
 
-    # WORKSHEETS
-    pl_ws = get_or_create_worksheet(sheet, "P&L")
-    bs_ws = get_or_create_worksheet(sheet, "Balance Sheet")
-    cf_ws = get_or_create_worksheet(sheet, "Cash Flow")
-    kpi_ws = get_or_create_worksheet(sheet, "KPI Result")
-    meta_ws = get_or_create_worksheet(sheet, "META")  # <--- TAMBAHAN
-
-    # WRITE DATA
-    print("⬆️ Updating P&L...")
-    upsert_financial_data(pl_ws, period, pl_data)
-
-    print("⬆️ Updating Balance Sheet...")
-    upsert_financial_data(bs_ws, period, bs_data)
-
-    print("⬆️ Updating Cash Flow...")
-    upsert_financial_data(cf_ws, period, cf_data)
-
-    print("➕ Appending KPI Result...")
-    append_kpi_rows(kpi_ws, kpi_rows)
-
-    # SIMPAN LINK DRIVE DI SHEET META
-    print("🔗 Saving Drive link to META sheet...")
-    if not meta_ws.row_values(1):
-        meta_ws.append_row(["Period", "PDF Drive Link"])
-    meta_ws.append_row([period, drive_link])
-
-    print("✅ FINANCIAL DATA UPDATED + PDF UPLOADED")
-
-    return {
-        "period": period,
-        "pl_rows": len(pl_data),
-        "bs_rows": len(bs_data),
-        "cf_rows": len(cf_data),
-        "kpi_rows": len(kpi_rows),
-        "drive_link": drive_link,  # <--- supaya bisa ditampilkan di UI
-    }
+        /* Footer */
+        .footer {
+            text-align: center;
+            font-size: 0.8rem;
+            color: #6B7280;
+            margin-top: 1.8rem;
+        }
+        .footer span.brand {
+            font-weight: 600;
+            color: #0F172A;
+        }
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
 
 
 # =========================
 # STREAMLIT APP
 # =========================
 def main():
-    st.set_page_config(page_title="Financial PDF → Google Sheet")
-
-    st.title("Financial PDF → Google Sheet")
-    st.write(
-        "Upload file laporan keuangan dalam bentuk PDF. "
-        "Aplikasi akan mem-parsing, mengupload PDF ke Google Drive, "
-        "dan mengirim hasilnya ke Google Sheet "
-        f'"{SPREADSHEET_NAME}".'
+    st.set_page_config(
+        page_title="Financial PDF → Google Sheet",
+        page_icon="💹",
+        layout="wide",
     )
 
-    uploaded_file = st.file_uploader("Upload PDF laporan", type=["pdf"])
+    inject_css()
+
+    # ========= TOP NAV =========
+    with st.container():
+        st.markdown(
+            """
+            <div class="top-nav">
+              <div class="top-nav-left">
+                <div style="width:22px;height:22px;border-radius:8px;background:#22C55E;display:flex;align-items:center;justify-content:center;">
+                  <span style="font-size:13px;">🦆</span>
+                </div>
+                <span>Financial Report Upload</span>
+                <span class="top-nav-tag">PDF → Google Sheet & Drive</span>
+              </div>
+              <div class="top-nav-right">
+                inHARMONY • Automated reporting
+              </div>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+
+    # ========= HERO SECTION =========
+    with st.container():
+        st.markdown('<div class="hero-wrapper">', unsafe_allow_html=True)
+
+        col_left, col_right = st.columns([1.3, 1], gap="large")
+
+        # ---- Left: text ----
+        with col_left:
+            st.markdown(
+                """
+                <div class="hero-pill">
+                  <span class="dot"></span>
+                  Upload once · Sheet updates automatically
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
+            st.markdown(
+                '<div class="hero-title">Automate Your Financial Data Flow</div>',
+                unsafe_allow_html=True,
+            )
+            st.markdown(
+                """
+                <div class="hero-subtitle">
+                  Upload laporan keuangan dalam format PDF, dan biarkan bebek analis
+                  favoritmu menyalin angka-angka ke Google Sheet & Google Drive — cepat,
+                  konsisten, dan bebas typo.
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
+
+            st.markdown(
+                """
+                <ul style="padding-left:1.1rem;margin-top:0.2rem;color:#4B5563;font-size:0.86rem;">
+                  <li>Support P&L, Balance Sheet, Cash Flow, dan KPI Result</li>
+                  <li>Update <b>FINANCIAL_REPORT</b> secara otomatis per periode</li>
+                  <li>PDF tersimpan rapi di folder Financial Reports di Google Drive</li>
+                </ul>
+                """,
+                unsafe_allow_html=True,
+            )
+
+        # ---- Right: duck + uploader ----
+        with col_right:
+            # Bebek
+            st.image("assets/duck.png", width=210, caption=None)
+
+            st.markdown('<div class="upload-card">', unsafe_allow_html=True)
+            st.markdown(
+                '<div class="upload-title">Upload PDF laporan</div>',
+                unsafe_allow_html=True,
+            )
+            st.markdown(
+                '<div class="upload-caption">Limit 20MB per file · Format: PDF</div>',
+                unsafe_allow_html=True,
+            )
+
+            uploaded_file = st.file_uploader(
+                label="",
+                type=["pdf"],
+                label_visibility="collapsed",
+            )
+            st.markdown("</div>", unsafe_allow_html=True)
+
+        st.markdown("</div>", unsafe_allow_html=True)  # close hero-wrapper
+
+    # ========= PROCESSING =========
+    result = None
 
     if uploaded_file is not None:
-        # Simpan PDF ke file sementara di server
         pdf_path = "report.pdf"
         with open(pdf_path, "wb") as f:
             f.write(uploaded_file.read())
 
-        with st.spinner("Memproses PDF dan meng-update Google..."):
+        with st.spinner("Memproses PDF, mengupdate Google Sheet & mengupload ke Drive..."):
             try:
+                # process_pdf milikmu yang sudah jalan (mengembalikan dict)
                 result = process_pdf(pdf_path)
             except Exception as e:
                 st.error("Terjadi error saat memproses PDF / update Google.")
@@ -134,14 +265,29 @@ def main():
                 return
 
         st.success("Selesai! ✅ Google Sheet & Google Drive sudah di-update.")
+
+    # ========= SUMMARY =========
+    if result:
         st.subheader("Ringkasan hasil")
         st.json(result)
 
-        # Tampilkan link Drive kalau ada
-        if result.get("drive_link"):
+        drive_link = result.get("drive_link")
+        if drive_link:
             st.markdown(
-                f"📎 File PDF di Google Drive: [Buka file]({result['drive_link']})"
+                f"📎 **File PDF di Google Drive:** "
+                f"[Buka file]({drive_link})",
+                unsafe_allow_html=False,
             )
+
+    # ========= FOOTER =========
+    st.markdown(
+        """
+        <div class="footer">
+          created by <span class="brand">xlsxcen</span> · Published 2026
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
 
 
 # =========================
