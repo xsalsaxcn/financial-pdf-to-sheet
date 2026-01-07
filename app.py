@@ -32,8 +32,6 @@ def process_pdf(pdf_path: str = "report.pdf"):
     """
     Baca PDF, parse semua section, update Google Sheet,
     dan upload PDF ke Google Drive.
-
-    Return dict ringkasan hasil.
     """
 
     # -------- EXTRACT & PARSE PDF --------
@@ -60,19 +58,16 @@ def process_pdf(pdf_path: str = "report.pdf"):
     try:
         print("☁️ Uploading PDF to Google Drive...")
         drive_meta = upload_pdf_to_drive(pdf_path, period)
-        # upload_pdf_to_drive diasumsikan return dict:
-        # { "file_id": ..., "file_name": ..., "link": ... }
+        # diasumsikan return dict: { "file_id": ..., "file_name": ..., "link": ... }
         drive_link = drive_meta.get("link")
         print("📎 Drive link:", drive_link)
     except Exception as e:
-        # Jangan matikan proses kalau upload gagal
         print("⚠️ Gagal upload ke Google Drive:", e)
 
     # -------- UPDATE GOOGLE SHEET --------
     print("🔗 Connecting to Google Sheet...")
     sheet = connect_sheet(SPREADSHEET_NAME)
 
-    # Worksheets
     pl_ws = get_or_create_worksheet(sheet, "P&L")
     bs_ws = get_or_create_worksheet(sheet, "Balance Sheet")
     cf_ws = get_or_create_worksheet(sheet, "Cash Flow")
@@ -107,120 +102,190 @@ def process_pdf(pdf_path: str = "report.pdf"):
 # =========================
 def main():
     st.set_page_config(
-        page_title="Financial PDF → Google Sheet",
+        page_title="Financial Report Upload",
         page_icon="🦆",
         layout="wide",
     )
 
-    # ---------- GLOBAL CSS ----------
+    # ---------- GLOBAL STYLE ----------
     st.markdown(
         """
         <style>
+        /* background halaman */
+        body {
+            background: linear-gradient(180deg, #020617 0%, #0b1120 40%, #020617 100%);
+        }
         .block-container {
             padding-top: 1.5rem;
             padding-bottom: 3rem;
         }
-        .upload-card {
-            background: #ffffff;
-            border-radius: 18px;
-            padding: 24px 28px 28px 28px;
-            box-shadow: 0 18px 40px rgba(15, 23, 42, 0.08);
-            border: 1px solid rgba(226, 232, 240, 0.9);
+        /* hero card utama */
+        .hero-card {
+            background: #f9fafb;
+            border-radius: 28px;
+            padding: 32px 40px;
+            box-shadow: 0 32px 80px rgba(15, 23, 42, 0.5);
+            border: 1px solid rgba(148, 163, 184, 0.35);
         }
+        .hero-topbar {
+            background: #020617;
+            border-radius: 18px 18px 0 0;
+            padding: 14px 24px;
+            color: #e5e7eb;
+            font-size: 0.9rem;
+            font-weight: 500;
+            margin-bottom: 24px;
+        }
+        .hero-title {
+            font-size: 2.2rem;
+            font-weight: 800;
+            color: #020617;
+            margin-bottom: 0.4rem;
+        }
+        .hero-subtitle {
+            font-size: 0.98rem;
+            color: #64748b;
+        }
+        /* upload panel kanan */
+        .upload-panel {
+            background: #e0f2fe;
+            border-radius: 24px;
+            padding: 20px 22px 24px 22px;
+            border: 2px dashed #60a5fa;
+        }
+        .upload-panel h5 {
+            margin-bottom: 0.2rem;
+        }
+        .upload-panel .stFileUploader {
+            padding-top: 8px;
+        }
+        /* hilangkan label uploader default */
+        .upload-panel label[data-baseweb="file-uploader"] {
+            display: none;
+        }
+        /* tips card bawah */
         .tips-card {
-            background: #f8fafc;
+            background: rgba(15, 23, 42, 0.85);
             border-radius: 18px;
-            padding: 20px 24px 24px 24px;
-            border: 1px solid rgba(226, 232, 240, 0.9);
+            padding: 18px 22px 20px 22px;
+            color: #e5e7eb;
+            border: 1px solid rgba(148, 163, 184, 0.5);
         }
         </style>
         """,
         unsafe_allow_html=True,
     )
 
-    # ---------- HERO BANNER ----------
+    # ---------- HERO CARD ----------
     with st.container():
-        try:
-            # Pastikan file ini ada di: assets/hero_banner.png
-            st.image("assets/hero_banner.png", use_column_width=True)
-        except Exception:
-            # Fallback kalau banner belum ada
-            st.title("Financial PDF → Google Sheet")
-            st.write(
-                "Upload file laporan keuangan dalam bentuk PDF. "
-                'Bot akan mem-parsing, mengirim hasilnya ke Google Sheet '
-                f'"{SPREADSHEET_NAME}", dan menyimpan PDF ke Google Drive.'
+        st.markdown('<div class="hero-card">', unsafe_allow_html=True)
+
+        # topbar kecil biru tua
+        st.markdown(
+            """
+            <div class="hero-topbar">
+              <span style="font-weight:600;">Financial Report Upload</span>
+              <span style="margin-left:8px; opacity:0.8;">· Upload PDF → Auto Parse → Google Sheet</span>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+
+        col_left, col_right = st.columns([1.35, 1])
+
+        # ----- kiri: logo, teks, bebek -----
+        with col_left:
+            # logo (opsional)
+            try:
+                st.image("assets/logo_inharmony.png", width=90)
+            except Exception:
+                pass
+
+            st.markdown('<div class="hero-title">Automate Your Financial Data Flow</div>', unsafe_allow_html=True)
+            st.markdown(
+                '<div class="hero-subtitle">'
+                "Effortless reporting with a friendly guide. "
+                "Upload laporan keuangan PDF, biarkan bot kirim ke Google Sheet & Google Drive."
+                "</div>",
+                unsafe_allow_html=True,
             )
 
-    st.markdown("")  # sedikit jarak di bawah banner
+            st.markdown("")  # jarak kecil
 
-    # ---------- MAIN CONTENT ----------
-    col_upload, col_info = st.columns([1.5, 1])
+            # duck mascot
+            try:
+                st.image("assets/duck.png", width=220)
+            except Exception:
+                st.write("🦆")  # fallback kalau gambar belum ada
 
-    # ====== KIRI: UPLOAD CARD ======
-    with col_upload:
-        st.markdown('<div class="upload-card">', unsafe_allow_html=True)
+        # ----- kanan: upload panel -----
+        with col_right:
+            st.markdown('<div class="upload-panel">', unsafe_allow_html=True)
 
-        st.subheader("Upload PDF laporan")
-        st.caption(
-            "Drag & drop file di sini atau klik **Browse files** "
-            "(max 20MB, format PDF)."
-        )
+            st.markdown("#### Drag and drop file here")
+            st.caption("Limit 20MB per file · PDF")
 
-        # Hilangkan label default uploader (kita pakai teks sendiri)
-        uploaded_file = st.file_uploader(
-            "Pilih file PDF",
-            type=["pdf"],
-            label_visibility="collapsed",
-        )
+            uploaded_file = st.file_uploader(
+                "Upload PDF laporan",
+                type=["pdf"],
+                label_visibility="collapsed",
+            )
 
-        result = None
+            result = None
 
-        if uploaded_file is not None:
-            pdf_path = "report.pdf"
-            with open(pdf_path, "wb") as f:
-                f.write(uploaded_file.read())
+            if uploaded_file is not None:
+                pdf_path = "report.pdf"
+                with open(pdf_path, "wb") as f:
+                    f.write(uploaded_file.read())
 
-            with st.spinner(
-                "Memproses PDF, meng-update Google Sheet, dan upload ke Google Drive..."
-            ):
-                try:
-                    result = process_pdf(pdf_path)
-                except Exception as e:
-                    st.error(
-                        "Terjadi error saat memproses PDF / update Google."
-                    )
-                    st.exception(e)
+                with st.spinner(
+                    "Memproses PDF, meng-update Google Sheet, dan upload ke Google Drive..."
+                ):
+                    try:
+                        result = process_pdf(pdf_path)
+                    except Exception as e:
+                        st.error("Terjadi error saat memproses PDF / update Google.")
+                        st.exception(e)
 
-            if result:
-                st.success("Selesai! ✅ Google Sheet & Google Drive sudah di-update.")
-                st.subheader("Ringkasan hasil")
-                st.json(result)
+                if result:
+                    st.success("Selesai! ✅ Google Sheet & Google Drive sudah di-update.")
+                    st.json(result)
 
-                if result.get("drive_link"):
-                    st.markdown(
-                        f'📁 **File PDF di Google Drive:** '
-                        f'[Buka file]({result["drive_link"]})'
-                    )
+                    if result.get("drive_link"):
+                        st.markdown(
+                            f'📁 **File PDF di Google Drive:** '
+                            f'[Buka file]({result["drive_link"]})'
+                        )
 
-        st.markdown("</div>", unsafe_allow_html=True)
+            st.markdown("</div>", unsafe_allow_html=True)  # end upload-panel
 
-    # ====== KANAN: TIPS CARD ======
-    with col_info:
+        st.markdown("</div>", unsafe_allow_html=True)  # end hero-card
+
+    # ---------- TIPS SECTION ----------
+    st.markdown("")
+    with st.container():
         st.markdown('<div class="tips-card">', unsafe_allow_html=True)
-        st.subheader("Tips")
-
+        st.markdown("#### Tips penggunaan")
         st.markdown(
             """
             - Pastikan format PDF mengikuti template laporan keuangan InHarmony.
-            - Kalau periodenya sama (misal **Nov 2025**),  
-              data **P&L / Balance Sheet / Cash Flow** akan diupdate di kolom periode yang sama.
+            - Kalau periodenya sama (misal **Nov 2025**), data **P&L / BS / Cash Flow**
+              akan diupdate di kolom periode yang sama.
             - KPI untuk periode yang sama akan **dioverwrite**, tidak ditumpuk ulang.
             - Simpan link Google Sheet & Google Drive di bookmark untuk akses cepat.
             """
         )
-
         st.markdown("</div>", unsafe_allow_html=True)
+
+    # ---------- FOOTER ----------
+    st.markdown(
+        """
+        <div style="text-align:center; color:#9ca3af; font-size:0.8rem; margin-top:2.5rem;">
+          created by xslsxcn · Published 2026
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
 
 
 # =========================
