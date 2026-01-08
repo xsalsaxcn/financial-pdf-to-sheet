@@ -1,8 +1,9 @@
 # app.py
 import os
+from pathlib import Path
 import streamlit as st
 
-# pastikan main.py punya fungsi process_pdf(pdf_path) yang sudah berjalan
+# pastikan main.py punya fungsi process_pdf(pdf_path)
 from main import process_pdf
 
 
@@ -29,17 +30,25 @@ st.markdown(
         font-family: "Inter", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
     }
 
-    /* HILANGKAN PADDING DEFAULT ATAS */
+    /* MAIN STREAMLIT CONTAINER – BATASIN LEBAR & CENTER */
     .block-container {
         padding-top: 0rem;
         padding-bottom: 2rem;
-        max-width: 100%;
+        max-width: 1200px;
+        margin: 0 auto;
     }
 
-    /* TOP BREADCRUMB BAR */
+    /* TOP BREADCRUMB BAR – FULL WIDTH */
+    .top-bar-wrapper {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        z-index: 100;
+    }
     .top-bar {
-        background: rgba(2, 8, 21, 0.92);
-        padding: 0.4rem 2.5rem;
+        background: rgba(2, 8, 21, 0.96);
+        padding: 0.45rem 2.5rem;
         font-size: 0.78rem;
         color: #c9d4ff;
         border-bottom: 1px solid rgba(255, 255, 255, 0.06);
@@ -53,9 +62,9 @@ st.markdown(
         opacity: 0.45;
     }
 
-    /* MAIN WRAPPER (FULL WIDTH, TAPI ADA MARGIN KIRI KANAN) */
+    /* SUPAYA KONTEN NGGAK KETUTUP TOP BAR */
     .app-main-container {
-        padding: 1.5rem 3rem 0 3rem;
+        padding: 3.2rem 0 0 0;  /* offset karena top-bar fixed */
     }
 
     /* SMALL BADGE */
@@ -69,7 +78,7 @@ st.markdown(
         color: #e8f5ff;
         background: radial-gradient(circle at left, #2dd57b 0%, #0f9b4f 40%, #062b38 100%);
         box-shadow: 0 6px 20px rgba(9, 188, 138, 0.45);
-        margin-top: 0.5rem;
+        margin-top: 0.4rem;
         margin-bottom: 0.8rem;
     }
     .app-badge-dot {
@@ -82,7 +91,7 @@ st.markdown(
 
     /* HERO SECTION */
     .hero-title {
-        font-size: 2.3rem;
+        font-size: 2.2rem;
         font-weight: 800;
         letter-spacing: 0.02em;
         color: #fdfdff;
@@ -197,7 +206,7 @@ st.markdown(
         transform: translateY(-0.5px);
     }
 
-    /* HOW IT WORKS */
+    /* SECTION TITLES */
     .section-title {
         font-size: 0.84rem;
         letter-spacing: 0.2em;
@@ -206,13 +215,26 @@ st.markdown(
         margin-top: 1.8rem;
         margin-bottom: 0.6rem;
     }
+
+    /* HOW IT WORKS CARD – BATASIN LEBAR & TINGGI GAMBAR */
     .how-card {
         background: linear-gradient(135deg, rgba(26, 39, 83, 0.96), rgba(10, 20, 46, 0.96));
         border-radius: 24px;
-        padding: 1.2rem 1.3rem 1.3rem 1.3rem;
+        padding: 1.1rem 1.4rem 1.3rem 1.4rem;
         box-shadow:
             0 22px 55px rgba(0, 0, 0, 0.85),
             0 0 0 1px rgba(145, 176, 255, 0.35);
+        display: flex;
+        justify-content: center;
+    }
+    .how-card img {
+        border-radius: 18px;
+        max-height: 420px;
+        width: 100%;
+        max-width: 960px;
+        object-fit: contain;
+        margin: 0 auto;
+        display: block;
     }
 
     /* TIPS */
@@ -255,7 +277,7 @@ st.markdown(
         color: #f1f4ff;
     }
 
-    /* RESULT JSON (HASIL PARSING) */
+    /* RESULT JSON */
     .result-json {
         margin-top: 1rem;
         background: rgba(3, 10, 30, 0.96);
@@ -282,16 +304,16 @@ st.markdown(
 
 
 # =========================
-# MAIN LAYOUT
+# TOP BAR (FIXED)
 # =========================
-
-# Top breadcrumb bar
 st.markdown(
     """
-    <div class="top-bar">
-        <span class="path-main">Financial Report Upload</span>
-        <span class="path-sep"> • </span>
-        <span>Upload PDF → Auto Parse → Google Sheet & Drive</span>
+    <div class="top-bar-wrapper">
+        <div class="top-bar">
+            <span class="path-main">Financial Report Upload</span>
+            <span class="path-sep"> • </span>
+            <span>Upload PDF → Auto Parse → Google Sheet &amp; Drive</span>
+        </div>
     </div>
     """,
     unsafe_allow_html=True,
@@ -299,7 +321,9 @@ st.markdown(
 
 st.markdown('<div class="app-main-container">', unsafe_allow_html=True)
 
-# Badge
+# =========================
+# BADGE + HERO
+# =========================
 st.markdown(
     """
     <div class="app-badge">
@@ -310,7 +334,6 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-# HERO
 col_left, col_right = st.columns([1.4, 1.2], gap="large")
 
 with col_left:
@@ -340,7 +363,6 @@ with col_right:
         unsafe_allow_html=True,
     )
 
-    # custom upload area (ikon + teks + browse button)
     up_col_left, up_col_right = st.columns([4, 1.4], gap="small")
 
     with up_col_left:
@@ -365,7 +387,6 @@ with col_right:
         )
 
     with up_col_right:
-        # tombol browse aslinya dari st.file_uploader
         st.markdown('<div class="upload-browse-btn">', unsafe_allow_html=True)
         uploaded_file = st.file_uploader(
             "Upload PDF laporan",
@@ -378,11 +399,9 @@ with col_right:
 
 
 # =========================
-# HOW IT WORKS SECTION
+# HOW IT WORKS
 # =========================
 st.markdown('<div class="section-title">HOW IT WORKS</div>', unsafe_allow_html=True)
-
-from pathlib import Path
 
 how_path = Path("assets/how_it_works.png")
 if how_path.exists():
@@ -420,7 +439,7 @@ st.markdown(
 
 
 # =========================
-# PROCESS UPLOADED FILE
+# PROCESS FILE
 # =========================
 result = None
 if uploaded_file is not None:
@@ -436,13 +455,14 @@ if uploaded_file is not None:
             st.error("Terjadi error saat memproses PDF / update Google.")
             st.exception(e)
 
-# tampilkan ringkasan hasil jika ada
+# =========================
+# RESULT SUMMARY
+# =========================
 if result is not None:
     st.markdown('<div class="result-json"><h3>Ringkasan hasil</h3>', unsafe_allow_html=True)
     st.json(result)
     st.markdown("</div>", unsafe_allow_html=True)
 
-    # kalau ada drive_link, tampilkan CTA
     link = result.get("drive_link")
     if link:
         st.markdown(
