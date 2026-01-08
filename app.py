@@ -7,387 +7,416 @@ from main import process_pdf  # pastikan main.py punya fungsi process_pdf(pdf_pa
 # PAGE CONFIG
 # =========================
 st.set_page_config(
-    page_title="Financial Report Upload",
-    page_icon="🦆",
+    page_title="Financial Report Upload · InHarmony",
+    page_icon="📊",
     layout="wide",
 )
 
-# =========================
-# GLOBAL STYLE (UPDATED)
-# =========================
-st.markdown(
-    """
-    <style>
-    /* Background & font global */
-    .stApp {
-        background: radial-gradient(circle at top,
-                    #2f4268 0%,
-                    #101b30 45%,
-                    #0b1424 100%);
-        color: #f5f7fb;
-        font-family: "Inter", system-ui, -apple-system, BlinkMacSystemFont,
-                     "Segoe UI", sans-serif;
-    }
-
-    h1, h2, h3, h4, h5, h6,
-    .stMarkdown, .stText, .stTooltipContent, label, p, li, span {
-        color: #f5f7fb !important;
-    }
-
-    [data-testid="stHeader"] {
-        background: transparent !important;
-    }
-
-    /* NAV BAR */
-    .nav-bar {
-        font-size: 0.85rem;
-        letter-spacing: 0.04em;
-        text-transform: uppercase;
-        color: #c3d5ff;
-        padding: 0.5rem 1.25rem;
-        border-radius: 999px;
-        border: 1px solid rgba(255, 255, 255, 0.08);
-        background: linear-gradient(90deg,
-                    rgba(255, 255, 255, 0.12),
-                    rgba(16, 27, 48, 0.8));
-        box-shadow: 0 8px 30px rgba(0, 0, 0, 0.35);
-        backdrop-filter: blur(12px);
-        display: inline-flex;
-        align-items: center;
-        gap: 0.35rem;
-    }
-    .nav-dot {
-        width: 8px;
-        height: 8px;
-        border-radius: 999px;
-        background: #4ade80;
-        box-shadow: 0 0 0 5px rgba(74, 222, 128, 0.2);
-        display: inline-block;
-    }
-
-    .pill-badge {
-        display: inline-flex;
-        align-items: center;
-        gap: 0.4rem;
-        padding: 0.3rem 0.75rem;
-        border-radius: 999px;
-        background: rgba(15, 118, 110, 0.3);
-        border: 1px solid rgba(34, 197, 187, 0.5);
-        color: #e0fffc;
-        font-size: 0.75rem;
-        margin-top: 0.5rem;
-    }
-    .pill-dot {
-        width: 7px;
-        height: 7px;
-        border-radius: 999px;
-        background: #22c55e;
-    }
-
-    /* HERO TEXT */
-    .hero-title {
-        font-size: 2.4rem;
-        font-weight: 800;
-        line-height: 1.2;
-        color: #ffffff;
-        margin-bottom: 0.4rem;
-    }
-    .hero-sub {
-        font-size: 0.98rem;
-        color: #dde7ff;
-        max-width: 520px;
-        line-height: 1.5;
-    }
-
-    /* UPLOAD CARD */
-    .upload-card {
-        background: linear-gradient(145deg,
-                    rgba(15, 23, 42, 0.96),
-                    rgba(15, 23, 42, 0.9));
-        border-radius: 1.4rem;
-        padding: 1.4rem 1.6rem 1.5rem 1.6rem;
-        box-shadow:
-            0 26px 70px rgba(0, 0, 0, 0.75),
-            0 0 0 1px rgba(148, 163, 184, 0.35);
-        border: 1px solid rgba(148, 163, 184, 0.7);
-    }
-    .upload-title {
-        font-size: 1.02rem;
-        font-weight: 600;
-        margin-bottom: 0.25rem;
-        color: #f9fafb;
-    }
-    .upload-sub {
-        font-size: 0.85rem;
-        color: #d1d5db;
-        margin-bottom: 0.8rem;
-    }
-
-    /* ==== FILE UPLOADER – PATTERN & FONT ==== */
-
-    /* Hapus wrapper putih default */
-    div[data-testid="stFileUploader"] {
-        background: transparent !important;
-        border: none !important;
-        padding: 0 !important;
-        margin-top: 0.2rem;
-    }
-
-    /* Dropzone utama (pattern + gradient) */
-    div[data-testid="stFileUploader"] > div {
-        /* layer 1: dotted pattern */
-        background-image:
-            radial-gradient(circle at 1px 1px,
-                rgba(148, 163, 184, 0.22) 1px,
-                transparent 0),
-            linear-gradient(135deg,
-                #f9fbff,
-                #e4ecff);
-        background-size: 7px 7px, 100% 100%;
-        border-radius: 1.1rem;
-        border: 1px dashed rgba(148, 163, 184, 0.9);
-        padding: 0.95rem 1.2rem;
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        gap: 0.9rem;
-        box-shadow:
-            0 18px 45px rgba(15, 23, 42, 0.95),
-            0 0 0 1px rgba(255, 255, 255, 0.7);
-    }
-
-    /* Hilangkan label bawaan */
-    div[data-testid="stFileUploader"] label {
-        display: none !important;
-    }
-
-    /* Teks di kiri (Drag & drop, limit) */
-    div[data-testid="stFileUploader"] span {
-        color: #0f172a !important;       /* navy gelap biar kebaca */
-        font-size: 0.9rem !important;
-        font-weight: 500 !important;
-    }
-
-    /* Icon cloud – besar & biru */
-    div[data-testid="stFileUploader"] svg {
-        width: 42px;
-        height: 42px;
-        stroke-width: 1.8;
-        stroke: #2563eb;
-    }
-
-    /* Tombol Browse files */
-    div[data-testid="stFileUploader"] button {
-        border-radius: 999px;
-        padding: 0.4rem 1.5rem;
-        font-size: 0.9rem;
-        font-weight: 600;
-        background: linear-gradient(135deg, #facc15, #fb923c);
-        color: #111827 !important;
-        border: none;
-        box-shadow: 0 12px 32px rgba(251, 191, 36, 0.5);
-        margin-left: 0.5rem;
-    }
-    div[data-testid="stFileUploader"] button:hover {
-        filter: brightness(1.05);
-        box-shadow: 0 16px 38px rgba(251, 191, 36, 0.65);
-    }
-
-    /* SECTION DIVIDER */
-    .section-divider {
-        height: 6px;
-        border-radius: 999px;
-        background: linear-gradient(90deg,
-                    rgba(148, 163, 184, 0.1),
-                    rgba(148, 163, 184, 0.4),
-                    rgba(148, 163, 184, 0.1));
-        margin: 0.4rem 0 1.1rem 0;
-    }
-    .section-label {
-        font-size: 0.78rem;
-        letter-spacing: 0.2em;
-        text-transform: uppercase;
-        color: #cbd5f5;
-        margin-bottom: 0.2rem;
-    }
-
-    /* TIPS CARD */
-    .tips-card {
-        background: radial-gradient(circle at top left,
-                    rgba(30, 64, 175, 0.35),
-                    rgba(15, 23, 42, 0.98));
-        border-radius: 1.2rem;
-        padding: 1rem 1.3rem;
-        border: 1px solid rgba(148, 163, 184, 0.7);
-        box-shadow: 0 18px 45px rgba(0, 0, 0, 0.7);
-        color: #edf2ff !important;
-    }
-    .tips-card li {
-        color: #e5e9ff !important;
-        font-size: 0.9rem;
-    }
-
-    .footer-text {
-        font-size: 0.72rem;
-        color: #cbd5ff;
-        opacity: 0.92;
-        margin-top: 1.7rem;
-        text-align: center;
-    }
-    .footer-highlight {
-        font-weight: 600;
-    }
-    </style>
-    """,
-    unsafe_allow_html=True,
-)
 
 # =========================
-# TOP NAV
+# GLOBAL STYLES
 # =========================
-st.markdown(
-    """
-    <div class="nav-bar">
-        <span class="nav-dot"></span>
-        <span>Financial Report Upload</span>
-        <span style="opacity:0.65;">· Upload PDF → Auto Parse → Google Sheet & Drive</span>
-    </div>
-    """,
-    unsafe_allow_html=True,
-)
+APP_CSS = """
+<style>
+/* APP BACKGROUND */
+.stApp {
+    background: radial-gradient(circle at 20% 0%, #1e293b 0, #020617 40%, #020617 100%);
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
 
-st.markdown(
-    """
-    <div class="pill-badge">
-        <span class="pill-dot"></span>
-        <span>InHarmony Financial Automation</span>
-    </div>
-    """,
-    unsafe_allow_html=True,
-)
+/* Main body width */
+.block-container {
+    max-width: 1200px;
+}
 
-st.write("")
+/* Global text colors (JANGAN include span di sini biar st.json aman) */
+h1, h2, h3, h4, h5, h6,
+.stMarkdown, .stText, .stTooltipContent, label, p, li {
+    color: #e5e7eb !important;
+}
+
+/* Link */
+a {
+    color: #38bdf8;
+}
+a:hover {
+    color: #7dd3fc;
+}
+
+/* TOP NAV BAR */
+.top-nav {
+    margin: 0.5rem 0 1.75rem 0;
+    padding: 0.6rem 1rem;
+    border-radius: 999px;
+    background: linear-gradient(90deg, #020617, #020617);
+    box-shadow: 0 18px 45px rgba(0, 0, 0, 0.6);
+    border: 1px solid rgba(148, 163, 184, 0.55);
+    display: flex;
+    align-items: center;
+    gap: 0.7rem;
+    font-size: 0.78rem;
+    color: #cbd5f5;
+}
+.top-nav strong {
+    color: #e5e7ff;
+}
+
+/* Status pill */
+.pill-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    padding: 0.25rem 0.7rem;
+    border-radius: 999px;
+    background: rgba(22, 163, 74, 0.15);
+    border: 1px solid rgba(34, 197, 94, 0.65);
+    color: #bbf7d0;
+    font-size: 0.7rem;
+    margin-bottom: 0.7rem;
+}
+.pill-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 999px;
+    background: #22c55e;
+}
+
+/* HERO TITLE */
+.hero-title {
+    font-size: 2.3rem;
+    font-weight: 800;
+    letter-spacing: 0.02em;
+    color: #f9fafb;
+    margin-bottom: 0.5rem;
+}
+.hero-subtitle {
+    font-size: 0.92rem;
+    line-height: 1.5;
+    color: #cbd5f5;
+}
+
+/* UPLOAD CARD WRAPPER (kanan) */
+.upload-wrapper {
+    display: flex;
+    justify-content: flex-end;
+    align-items: stretch;
+    margin-top: 0.25rem;
+}
+
+/* Card luar */
+.upload-card {
+    width: 100%;
+    padding: 0.9rem 1.3rem 1.05rem 1.3rem;
+    border-radius: 1.1rem;
+    background:
+        radial-gradient(circle at 0% -20%, rgba(56, 189, 248, 0.35), transparent 55%),
+        radial-gradient(circle at 120% 120%, rgba(248, 250, 252, 0.05), transparent 60%),
+        linear-gradient(135deg, #020617 0%, #020617 45%, #020617 100%);
+    border: 1px solid rgba(148, 163, 184, 0.55);
+    box-shadow: 0 25px 60px rgba(0, 0, 0, 0.9);
+}
+
+/* Card header text */
+.upload-card-title {
+    font-size: 0.98rem;
+    font-weight: 600;
+    color: #f9fafb;
+    margin-bottom: 0.05rem;
+}
+.upload-card-subtitle {
+    font-size: 0.78rem;
+    color: #cbd5f5;
+    margin-bottom: 0.75rem;
+}
+
+/* FILE UPLOADER STYLING INSIDE CARD */
+.upload-inner {
+    border-radius: 0.9rem;
+    border: 1px dashed rgba(148, 163, 184, 0.8);
+    background: radial-gradient(circle at 10% 0%, rgba(248, 250, 252, 0.16), rgba(15, 23, 42, 0.9));
+    padding: 0.65rem 0.75rem;
+}
+
+/* Hide original label text (kita styling sendiri) */
+.upload-inner label {
+    font-size: 0.85rem;
+}
+
+/* Target komponen uploader */
+.upload-inner div[data-testid="stFileUploader"] {
+    background: #f9fafb;
+    border-radius: 0.75rem;
+    padding: 0.6rem 0.8rem;
+    box-shadow: 0 18px 40px rgba(15, 23, 42, 0.9);
+}
+
+/* Layout internal uploader: cloud + text + button */
+.upload-inner div[data-testid="stFileUploader"] > div:first-child {
+    gap: 0.5rem;
+}
+
+/* Cloud icon */
+.upload-inner svg {
+    width: 32px;
+    height: 32px;
+}
+
+/* Text di dalam uploader */
+.upload-inner div[data-testid="stFileUploader"] span {
+    color: #0f172a !important;
+    font-size: 0.8rem !important;
+}
+
+/* Tombol Browse files */
+.upload-inner button {
+    background: linear-gradient(135deg, #f59e0b, #f97316);
+    color: #0f172a;
+    font-weight: 600;
+    border-radius: 999px;
+    padding: 0.4rem 1.2rem;
+    border: none;
+}
+.upload-inner button:hover {
+    background: linear-gradient(135deg, #facc15, #f97316);
+    color: #020617;
+}
+
+/* SECTION TITLE */
+.section-title {
+    margin-top: 2.4rem;
+    margin-bottom: 0.3rem;
+    font-size: 0.78rem;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: #9ca3af;
+}
+.section-divider {
+    width: 100%;
+    height: 0.9rem;
+    border-radius: 999px;
+    background: radial-gradient(circle at 15% 0%, rgba(148, 163, 184, 0.8), transparent 55%),
+                linear-gradient(90deg, rgba(15, 23, 42, 0.95), rgba(15, 23, 42, 0.7));
+    margin-bottom: 0.9rem;
+}
+
+/* HOW IT WORKS placeholder */
+.how-placeholder {
+    padding: 0.85rem 1.1rem;
+    border-radius: 0.75rem;
+    border: 1px dashed rgba(148, 163, 184, 0.7);
+    font-size: 0.8rem;
+    color: #d1d5db;
+    background: rgba(15, 23, 42, 0.75);
+}
+
+/* TIPS CARD */
+.tips-card {
+    margin-top: 0.4rem;
+    padding: 1.1rem 1.15rem 0.9rem 1.15rem;
+    border-radius: 1rem;
+    border: 1px solid rgba(148, 163, 184, 0.7);
+    background: radial-gradient(circle at 0% -40%, rgba(248, 250, 252, 0.1), transparent 55%),
+                rgba(15, 23, 42, 0.92);
+    box-shadow: 0 22px 55px rgba(0, 0, 0, 0.9);
+    font-size: 0.85rem;
+    color: #e5e7eb;
+}
+.tips-card ul {
+    padding-left: 1.2rem;
+    margin-bottom: 0.2rem;
+}
+.tips-card li {
+    margin-bottom: 0.25rem;
+    color: #e5e7eb !important;
+}
+
+/* FOOTER */
+.footer {
+    margin-top: 1.8rem;
+    text-align: center;
+    font-size: 0.75rem;
+    color: #9ca3af;
+}
+.footer span {
+    color: #e5e7eb;
+}
+
+/* SUCCESS MESSAGE TWEAK */
+div[data-testid="stToastContainer"] div[role="alert"] {
+    font-size: 0.85rem;
+}
+
+/* JSON RESULT CARD */
+div[data-testid="stJson"] {
+    background: rgba(15, 23, 42, 0.98);
+    border-radius: 0.9rem;
+    padding: 0.9rem 1.1rem;
+    border: 1px solid rgba(148, 163, 184, 0.7);
+    box-shadow: 0 18px 40px rgba(0, 0, 0, 0.7);
+}
+div[data-testid="stJson"] pre,
+div[data-testid="stJson"] code,
+div[data-testid="stJson"] span {
+    color: #e5e7eb !important;
+    font-size: 0.85rem !important;
+}
+</style>
+"""
+st.markdown(APP_CSS, unsafe_allow_html=True)
+
 
 # =========================
-# HERO SECTION
+# STREAMLIT LAYOUT
 # =========================
-left, right = st.columns([1.4, 1.2])
-
-with left:
+def main():
+    # Top nav
     st.markdown(
         """
-        <div class="hero-title">Automate Your<br>Financial Data Flow</div>
-        """,
-        unsafe_allow_html=True,
-    )
-    st.markdown(
-        """
-        <p class="hero-sub">
-            Effortless reporting with a friendly guide. Upload laporan keuangan PDF,
-            biarkan bot kirim angka ke Google Sheet <strong>"FINANCIAL_REPORT"</strong>
-            dan menyimpan PDF-nya di Google Drive.
-        </p>
+        <div class="top-nav">
+            <strong>Financial Report Upload</strong>
+            <span>· Upload PDF → Auto Parse → Google Sheet & Drive</span>
+        </div>
         """,
         unsafe_allow_html=True,
     )
 
-with right:
+    # Status pill
     st.markdown(
         """
-        <div class="upload-card">
-            <div class="upload-title">Upload Financial PDF Report</div>
-            <div class="upload-sub">
-                Drag &amp; drop atau klik tombol di bawah (maks 20MB, PDF).
-            </div>
+        <div class="pill-badge">
+            <div class="pill-dot"></div>
+            <span>InHarmony Financial Automation</span>
+        </div>
         """,
         unsafe_allow_html=True,
     )
 
-    uploaded_file = st.file_uploader(
-        label="",
-        type=["pdf"],
-        key="pdf_uploader_main",
-    )
+    # HERO SECTION (title + upload)
+    hero_left, hero_right = st.columns([1.1, 1])
 
-    st.markdown("</div>", unsafe_allow_html=True)  # tutup upload-card
-
-# =========================
-# PROSES PDF
-# =========================
-result = None
-
-if uploaded_file is not None:
-    pdf_path = "report.pdf"
-    with open(pdf_path, "wb") as f:
-        f.write(uploaded_file.read())
-
-    with st.spinner("Memproses PDF dan meng-update Google Sheet & Drive..."):
-        try:
-            result = process_pdf(pdf_path)
-        except Exception as e:
-            st.error("Terjadi error saat memproses PDF / update Google.")
-            st.exception(e)
-
-if result:
-    st.success("Selesai! ✅ Google Sheet & Google Drive sudah di-update.")
-    st.json(result)
-    if isinstance(result, dict) and result.get("drive_link"):
+    with hero_left:
         st.markdown(
-            f"[Buka file PDF di Google Drive]({result['drive_link']})",
-            unsafe_allow_html=False,
+            '<div class="hero-title">Automate Your Financial Data Flow</div>',
+            unsafe_allow_html=True,
+        )
+        st.markdown(
+            """
+            <p class="hero-subtitle">
+            Effortless reporting with a friendly guide. Upload laporan keuangan PDF,
+            biarkan bot mengirim angka ke Google Sheet <strong>"FINANCIAL_REPORT"</strong>
+            dan menyimpan PDF-nya di Google Drive.
+            </p>
+            """,
+            unsafe_allow_html=True,
         )
 
-st.write("")
+    with hero_right:
+        st.markdown('<div class="upload-wrapper"><div class="upload-card">', unsafe_allow_html=True)
+        st.markdown(
+            """
+            <div class="upload-card-title">Upload Financial PDF Report</div>
+            <div class="upload-card-subtitle">
+                Drag &amp; drop atau klik tombol di bawah (maks 20MB, PDF).
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
 
-# =========================
-# HOW IT WORKS
-# =========================
-st.markdown(
-    '<div class="section-label">HOW IT WORKS</div><div class="section-divider"></div>',
-    unsafe_allow_html=True,
-)
+        # Uploader inside styled wrapper
+        st.markdown('<div class="upload-inner">', unsafe_allow_html=True)
+        uploaded_file = st.file_uploader(
+            "Drag and drop file here",
+            type=["pdf"],
+            label_visibility="collapsed",
+            key="pdf_uploader",
+        )
+        st.markdown("</div></div></div>", unsafe_allow_html=True)
 
-how_it_works_path = "assets/how_it_works.png"
-if os.path.exists(how_it_works_path):
-    st.image(how_it_works_path, use_column_width=True)
-else:
-    st.info(
-        "Tambahkan ilustrasi alur di **assets/how_it_works.png** "
-        "untuk menampilkan gambar di sini."
+    st.write("")  # small spacer
+
+    # Jika user upload file → proses
+    result = None
+    if uploaded_file is not None:
+        # Simpan file sementara
+        pdf_path = "report.pdf"
+        with open(pdf_path, "wb") as f:
+            f.write(uploaded_file.read())
+
+        with st.spinner("Memproses PDF dan meng-update Google Sheet & Google Drive..."):
+            try:
+                result = process_pdf(pdf_path)
+            except Exception as e:
+                st.error("Terjadi error saat memproses PDF / update Google.")
+                st.exception(e)
+
+        if result:
+            st.success("Selesai! ✅ Google Sheet & Google Drive sudah di-update.")
+            st.markdown("##### Ringkasan hasil")
+            st.json(result)
+
+            # Kalau ada drive_link di result → tampilkan link
+            drive_link = result.get("drive_link")
+            if isinstance(drive_link, dict):
+                drive_url = drive_link.get("link")
+            else:
+                drive_url = drive_link
+
+            if drive_url:
+                st.markdown(
+                    f"**File PDF di Google Drive:** "
+                    f"[Buka file]({drive_url})",
+                    unsafe_allow_html=True,
+                )
+
+    # =========================
+    # HOW IT WORKS
+    # =========================
+    st.markdown('<div class="section-title">HOW IT WORKS</div>', unsafe_allow_html=True)
+    st.markdown('<div class="section-divider"></div>', unsafe_allow_html=True)
+
+    how_path = os.path.join("assets", "how_it_works.png")
+    if os.path.exists(how_path):
+        st.image(how_path, use_column_width=True)
+    else:
+        st.markdown(
+            '<div class="how-placeholder">'
+            'Tambahkan ilustrasi alur di <code>assets/how_it_works.png</code> untuk menampilkan gambar di sini.'
+            "</div>",
+            unsafe_allow_html=True,
+        )
+
+    # =========================
+    # TIPS PENGGUNAAN
+    # =========================
+    st.markdown('<div class="section-title">TIPS PENGGUNAAN</div>', unsafe_allow_html=True)
+    st.markdown('<div class="section-divider"></div>', unsafe_allow_html=True)
+
+    st.markdown('<div class="tips-card">', unsafe_allow_html=True)
+    st.markdown(
+        """
+        <ul>
+            <li>Pastikan format PDF mengikuti template laporan keuangan InHarmony.</li>
+            <li>Kalau periodenya sama (misal <strong>Nov 2025</strong>), data P&amp;L / BS / Cash Flow akan diupdate di kolom periode yang sama.</li>
+            <li>KPI untuk periode yang sama akan <strong>dioverwrite</strong>, tidak ditumpuk ulang.</li>
+            <li>Simpan link Google Sheet &amp; Google Drive di bookmark untuk akses cepat.</li>
+        </ul>
+        """,
+        unsafe_allow_html=True,
+    )
+    st.markdown("</div>", unsafe_allow_html=True)
+
+    # =========================
+    # FOOTER
+    # =========================
+    st.markdown(
+        """
+        <div class="footer">
+            created by <span>xslsxcn</span> · Published 2026
+        </div>
+        """,
+        unsafe_allow_html=True,
     )
 
-st.write("")
 
-# =========================
-# TIPS PENGGUNAAN
-# =========================
-st.markdown(
-    '<div class="section-label">TIPS PENGGUNAAN</div><div class="section-divider"></div>',
-    unsafe_allow_html=True,
-)
-
-st.markdown(
-    """
-    <div class="tips-card">
-    <ul>
-        <li>Pastikan format PDF mengikuti template laporan keuangan InHarmony.</li>
-        <li>Kalau periodenya sama (misal <strong>Nov 2025</strong>), data P&amp;L / BS / Cash Flow akan diupdate di kolom periode yang sama.</li>
-        <li>KPI untuk periode yang sama akan <strong>dioverwrite</strong>, tidak ditumpuk ulang.</li>
-        <li>Simpan link Google Sheet &amp; Google Drive di bookmark untuk akses cepat.</li>
-    </ul>
-    </div>
-    """,
-    unsafe_allow_html=True,
-)
-
-# =========================
-# FOOTER
-# =========================
-st.markdown(
-    """
-    <div class="footer-text">
-        created by <span class="footer-highlight">xslsxcn</span> · Published 2026
-    </div>
-    """,
-    unsafe_allow_html=True,
-)
+if __name__ == "__main__":
+    main()
