@@ -2,7 +2,6 @@ import json
 import gspread
 import streamlit as st
 from google.oauth2.service_account import Credentials
-from gspread.utils import rowcol_to_a1
 
 # =========================
 # CONFIG
@@ -18,10 +17,10 @@ SCOPES = [
 # =========================
 def connect_sheet(spreadsheet_name: str):
     """
-    Connect ke Google Spreadsheet berdasarkan NAMA
-    (compatible untuk Streamlit Cloud).
+    Connect to Google Spreadsheet by NAME
+    (Streamlit Cloud compatible)
 
-    Pastikan di secrets.toml / Secrets Streamlit ada:
+    Di secrets.toml:
 
     [gcp_service_account]
     json = \"\"\"{ ...JSON service account dari Google... }\"\"\"
@@ -46,12 +45,9 @@ def connect_sheet(spreadsheet_name: str):
 # =========================
 # GET OR CREATE WORKSHEET
 # =========================
-def get_or_create_worksheet(sheet, title: str, rows: int = 1000, cols: int = 30):
+def get_or_create_worksheet(sheet, title: str, rows: int = 1000, cols: int = 10):
     """
-    Ambil worksheet kalau ada, kalau belum ada → buat baru.
-
-    sheet : object spreadsheet dari gspread
-    title : nama worksheet (tab) yang dicari / dibuat
+    Get worksheet if exists, otherwise create it.
     """
     try:
         return sheet.worksheet(title)
@@ -66,144 +62,135 @@ def get_or_create_worksheet(sheet, title: str, rows: int = 1000, cols: int = 30)
 # =========================
 # UPSERT FINANCIAL DATA
 # (P&L, Balance Sheet, Cash Flow)
+# FORMAT: long seperti KPI
+# Period | Account | Value
 # =========================
 def upsert_financial_data(ws, period: str, data: dict):
     """
     ws      : worksheet object
-    period  : misal "Nov 2025"
+    period  : "Nov 2025"
     data    : dict {Account: value}
 
-    Logic:
-    - Baris 1: header → kolom A = "Account", kolom berikutnya = periode
-    - Kolom A: daftar account (akun)
-    - Kalau account sudah ada → update value di periode tsb
-    - Kalau account belum ada → tambah baris baru
+    Format sheet:
+    A: Period
+    B: Account
+    C: Value
+
+    - Kalau sheet kosong: tulis header + semua baris
+    - Kalau sudah ada data: hapus semua baris untuk period tsb, lalu tulis ulang
+      (overwrite, bukan menumpuk)
     """
 
     # ===== ENSURE HEADER =====
-    headers = ws.row_values(1)
-    if not headers:
-        ws.update("A1", [["Account"]])
-        headers = ["Account"]
-
-    # ===== PERIOD COLUMN =====
-    if period in headers:
-        col = headers.index(period) + 1  # index list dimulai 0, kolom dimulai 1
+    header = ws.row_values(1)
+    if not header:
+        header = ["Period", "Account", "Value"]
+        ws.update("A1", [header])
     else:
-        col = len(headers) + 1
-        ws.update_cell(1, col, period)
+        # kalau header lama bukan 3 kolom, paksa jadi format baru
+        if header[:3] != ["Period", "Account", "Value"]:
+            header = ["Period", "Account", "Value"]
+            ws.update("A1", [header])
 
-    # ===== EXISTING ACCOUNTS =====
-    account_column = ws.col_values(1)  # kolom A
+    # ===== EXISTING DATA =====
+    all_values = ws.get_all_values()  # termasuk header
+    existing_rows = all_values[1:] if len(all_values) > 1 else []
 
-    batch_updates = []
+    # Filter: simpan hanya baris yang period-nya BUKAN period sekarang
+    keep_rows = [r for r in existing_rows if r and r[0] != period]
 
+    # ===== NEW ROWS UNTUK PERIOD INI =====
+    new_rows = []
     for account, value in data.items():
-        # Cari baris untuk account ini
-        if account in account_column:
-            row = account_column.index(account) + 1
-        else:
-            # Account baru → tambah di baris paling bawah
-            row = len(account_column) + 1
-            account_column.append(account)
+        # convert ke string supaya tampil rapi, tapi tetap bisa di-format number di Sheet
+        new_rows.append([period, account, value])
 
-            batch_updates.append(
-                {
-                    "range": f"A{row}",
-                    "values": [[account]],
-                }
-            )
+    # Gabungkan: baris lama (periode lain) + baris baru (periode ini)
+    final_rows = keep_rows + new_rows
 
-        # Sel untuk periode + account ini
-        cell = rowcol_to_a1(row, col)
-        batch_updates.append(
-            {
-                "range": cell,
-                "values": [[value]],
-            }
-        )
+    # ===== TULIS ULANG KE SHEET (MINIM REQUEST) =====
+    # 1) clear semua kecuali header
+    ws.resize(rows=1)  # sisakan baris header saja
 
-    if batch_updates:
-        ws.batch_update(batch_updates, value_input_option="USER_ENTERED")
+    # 2) append semua data sekaligus
+    if final_rows:
+        ws.append_rows(final_rows, value_input_option="USER_ENTERED")
 
 
 # =========================
-# APPEND / OVERWRITE KPI RESULT
+# KPI RESULT (LONG FORMAT)
 # =========================
 def append_kpi_rows(ws, rows: list):
     """
-    ws   : worksheet object
-    rows : list of rows, format:
-        [
-            Period,
-            Category,
-            KPI Name,
-            Result,
-            Result Unit,
-            Target,
-            Target Unit,
-            Trend,
-            Trend Unit,
-            Importance
-        ]
+    rows format (setiap elemen list adalah 1 baris):
+    [
+        Period,
+        Category,
+        KPI Name,
+        Result,
+        Result Unit,
+        Target,
+        Target Unit,
+        Trend,
+        Trend Unit,
+        Importance
+    ]
 
     Behaviour:
-    - Kalau sudah ada KPI dengan Period yang sama:
-        hapus SEMUA baris period tsb dulu (dalam 1 batch request),
-        lalu append rows baru → overwrite per period.
+    - Header fixed
+    - Semua baris untuk period yang sama akan di-overwrite
+      (hapus dulu period tsb, lalu tulis ulang)
     """
 
     if not rows:
         return
 
-    # period dari batch ini (semua baris sama period)
-    period = rows[0][0]
+    target_period = rows[0][0]
 
     # ===== ENSURE HEADER =====
-    if not ws.row_values(1):
-        ws.append_row(
-            [
-                "Period",
-                "Category",
-                "KPI Name",
-                "Result",
-                "Result Unit",
-                "Target",
-                "Target Unit",
-                "Trend",
-                "Trend Unit",
-                "Importance",
-            ]
-        )
+    header = ws.row_values(1)
+    if not header:
+        header = [
+            "Period",
+            "Category",
+            "KPI Name",
+            "Result",
+            "Result Unit",
+            "Target",
+            "Target Unit",
+            "Trend",
+            "Trend Unit",
+            "Importance",
+        ]
+        ws.update("A1", [header])
+    else:
+        # Kalau header tidak sesuai, paksa jadi header baru
+        expected = [
+            "Period",
+            "Category",
+            "KPI Name",
+            "Result",
+            "Result Unit",
+            "Target",
+            "Target Unit",
+            "Trend",
+            "Trend Unit",
+            "Importance",
+        ]
+        if header[: len(expected)] != expected:
+            ws.update("A1", [expected])
 
-    # ===== CARI BARIS YANG PERLU DIHAPUS UNTUK PERIOD INI =====
-    all_values = ws.get_all_values()  # termasuk header di row 1
+    # ===== EXISTING DATA =====
+    all_values = ws.get_all_values()
+    existing_rows = all_values[1:] if len(all_values) > 1 else []
 
-    rows_to_delete = []
-    for idx, row in enumerate(all_values[1:], start=2):  # mulai dari baris 2 (data)
-        if row and len(row) > 0 and row[0] == period:
-            rows_to_delete.append(idx)
+    # Simpan hanya baris dengan period ≠ target_period
+    keep_rows = [r for r in existing_rows if r and r[0] != target_period]
 
-    # ===== HAPUS DALAM 1 BATCH REQUEST =====
-    if rows_to_delete:
-        requests = []
-        # pakai index 0-based, endIndex exclusive
-        for r in sorted(rows_to_delete, reverse=True):
-            requests.append(
-                {
-                    "deleteDimension": {
-                        "range": {
-                            "sheetId": ws.id,
-                            "dimension": "ROWS",
-                            "startIndex": r - 1,  # row 2 -> index 1
-                            "endIndex": r,        # sampai row 2 (exclusive)
-                        }
-                    }
-                }
-            )
+    # Gabungkan: baris lama (periode lain) + baris baru utk target_period
+    final_rows = keep_rows + rows
 
-        # Satu HTTP request ke Sheets API untuk semua delete
-        ws.spreadsheet.batch_update({"requests": requests})
-
-    # ===== TULIS KPI BARU =====
-    ws.append_rows(rows, value_input_option="USER_ENTERED")
+    # ===== TULIS ULANG KE SHEET =====
+    ws.resize(rows=1)  # sisakan header
+    if final_rows:
+        ws.append_rows(final_rows, value_input_option="USER_ENTERED")
