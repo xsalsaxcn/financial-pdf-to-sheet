@@ -1,6 +1,22 @@
 import re
 
+# =============================
+# CONFIG
+# =============================
+KPI_CATEGORIES = {
+    "A PROFITABILITY": "PROFITABILITY",
+    "B ACTIVITY": "ACTIVITY",
+    "C EFFICIENCY": "EFFICIENCY",
+    "D ASSET USAGE": "ASSET USAGE",
+    "E LIQUIDITY": "LIQUIDITY",
+    "F COVERAGE": "COVERAGE",
+    "G GEARING": "GEARING",
+    "H CASH FLOW": "CASH FLOW",
+}
 
+# =============================
+# PERIOD DETECTOR
+# =============================
 def detect_period(text: str) -> str:
     pattern = r"(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s+(\d{4})"
     match = re.search(pattern, text, re.IGNORECASE)
@@ -11,7 +27,17 @@ def detect_period(text: str) -> str:
     return "Unknown Period"
 
 
+# =============================
+# HELPERS
+# =============================
 def clean_number(value: str) -> int:
+    """
+    Bersihkan angka gaya Indonesia / laporan keuangan:
+    - buang 'Rp'
+    - buang titik (.) sebagai pemisah ribuan
+    - buang koma (,)
+    - buang tanda minus di depan (untuk P&L kamu sudah treat absolute)
+    """
     value = (
         value.replace("Rp", "")
         .replace(".", "")
@@ -21,13 +47,13 @@ def clean_number(value: str) -> int:
     )
     try:
         return int(value)
-    except:
+    except Exception:
         return 0
 
 
 def extract_pl_block(text: str) -> str:
     """
-    Extract ONLY Profit & Loss section
+    Ambil hanya blok Profit & Loss dari keseluruhan PDF text.
     """
     lines = text.splitlines()
     pl_lines = []
@@ -60,9 +86,12 @@ def extract_pl_block(text: str) -> str:
     return "\n".join(pl_lines)
 
 
+# =============================
+# DICT VERSION (untuk sheet kolom per periode)
+# =============================
 def parse_profit_loss(text: str) -> dict:
     """
-    Parse clean Profit & Loss table only
+    Hasil: dict {Account Name: Amount} – versi lama
     """
     pl_data = {}
 
@@ -73,9 +102,11 @@ def parse_profit_loss(text: str) -> dict:
         if not line:
             continue
 
+        # skip header
         if "ACCOUNT" in line.upper() or "VARIANCE" in line.upper():
             continue
 
+        # cari angka pertama di baris
         numbers = re.findall(r"\d{1,3}(?:[.,]\d{3})+", line)
         if not numbers:
             continue
@@ -90,3 +121,38 @@ def parse_profit_loss(text: str) -> dict:
         pl_data[account] = value
 
     return pl_data
+
+
+# =============================
+# ROWS VERSION (untuk “tabel seperti KPI Result”)
+# =============================
+def parse_profit_loss_rows(text: str, period: str):
+    """
+    Hasil: list of rows dengan format mirip KPI Result:
+
+        [
+            Period,        # "Nov 2025"
+            "P&L",         # Category (fixed, biar konsisten)
+            Account Name,  # misal "Total Revenue"
+            Amount,        # angka (int)
+            "Rp"           # Currency
+        ]
+
+    Dipakai untuk bikin worksheet P&L yang bentuknya vertikal (per baris),
+    mirip layout KPI Result.
+    """
+    pl_dict = parse_profit_loss(text)
+    rows = []
+
+    for account, amount in pl_dict.items():
+        rows.append(
+            [
+                period,
+                "P&L",
+                account,
+                amount,
+                "Rp",
+            ]
+        )
+
+    return rows
